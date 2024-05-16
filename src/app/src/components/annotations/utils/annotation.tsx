@@ -42,9 +42,58 @@ export const GetAnnotationColour = (
 };
 
 /**
+ * Get intersection of two annotations
+ */
+function GetAnnotationIntersection(
+  annotation1: PolylineObjectType,
+  annotation2: PolylineObjectType
+): PolylineObjectType[] {
+  const intersectedObjects: PolylineObjectType[] = [];
+
+  // Check if annotations are polygons
+  if (annotation1 instanceof L.Polygon && annotation2 instanceof L.Polygon) {
+    const poly1 = annotation1 as L.Polygon;
+    const poly2 = annotation2 as L.Polygon;
+
+    // Get intersection points between polygons
+    const intersectionPoints = poly1.getLatLngs().flatMap(point => {
+      if (poly2.getBounds().contains(point)) {
+        return [point];
+      }
+      return [];
+    });
+
+    // Calculate area of intersection polygon
+    if (intersectionPoints.length > 2) {
+      const intersectionPolygon = new L.Polygon(intersectionPoints) as L.Polygon;
+      intersectedObjects.push(intersectionPolygon);
+    }
+  }
+
+  // Return intersected objects
+  return intersectedObjects;
+}
+
+/**
  * This function attaches a several crucial listeners to act on individual
  * annotation layers.
  */
+// export const AttachAnnotationHandlers = (
+//   drawmap: L.DrawMap,
+//   annotationGroup: L.FeatureGroup,
+//   layer: L.Layer | any,
+//   project: string,
+//   annotationID: string | undefined
+// ): PolylineObjectType => {
+//   /**
+//    * Obtain Annotation ID from Layer Attribution of AnnotationID is Undefined
+//    */
+
+//   // eslint-disable-next-line no-param-reassign
+//   (layer.options as any).annotationID = annotationID;
+//   return layer;
+// };
+
 export const AttachAnnotationHandlers = (
   drawmap: L.DrawMap,
   annotationGroup: L.FeatureGroup,
@@ -52,14 +101,61 @@ export const AttachAnnotationHandlers = (
   project: string,
   annotationID: string | undefined
 ): PolylineObjectType => {
+  let selectedAnnotation: PolylineObjectType | null = null;
+  let intersectedAnnotation: PolylineObjectType | null = null;
+
+  // Add right-click event listener to the layer
+  layer.on("contextmenu", (event: L.LeafletMouseEvent) => {
+    const intersect = "Get intersection"; // Calculate intersect value here
+    const popupContent = `<b>Options</b><br>Intersect: ${intersect}`;
+    L.popup()
+      .setLatLng(event.latlng)
+      .setContent(popupContent)
+      .openOn(drawmap);
+
+    // Listen for click events on the "Intersect" option
+    if (document) {
+      document
+        .querySelector(".leaflet-popup-content b")
+        ?.addEventListener("click", () => {
+          alert("Select another annotation for Annotation Intersection");
+        });
+    }
+  });
+
+  // Add click event listener to the layer
+  layer.on("click", (event: L.LeafletMouseEvent) => {
+    if (!selectedAnnotation) {
+      selectedAnnotation = layer;
+    } else {
+      intersectedAnnotation = layer;
+      const intersectionArea = GetAnnotationIntersection(
+        selectedAnnotation,
+        intersectedAnnotation
+      );
+
+      if (intersectionArea > 0) {
+        // Highlight the intersection area with red
+        intersectedAnnotation.setStyle({ color: "red" });
+      } else {
+        alert("No intersection found");
+      }
+
+      // Reset selectedAnnotation and intersectedAnnotation for next selection
+      selectedAnnotation = null;
+      intersectedAnnotation = null;
+    }
+  });
+
   /**
    * Obtain Annotation ID from Layer Attribution of AnnotationID is Undefined
    */
-
   // eslint-disable-next-line no-param-reassign
   (layer.options as any).annotationID = annotationID;
+
   return layer;
 };
+
 
 /**
  * This function generates leaflet vector objects such as polygon and rectangle
