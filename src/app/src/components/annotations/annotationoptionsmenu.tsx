@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Menu, MenuItem } from '@blueprintjs/core';
 import styles from './annotationoptionsmenu.module.css';
-import { intersect } from '@turf/turf';
 
 interface AnnotationOptionsMenuProps {
   x: number;
@@ -39,7 +38,7 @@ const AnnotationOptionsMenu: React.FC<AnnotationOptionsMenuProps> = ({ x, y, onC
   if (!isVisible) return null;
 
   return (
-    <div className={styles.Menu} style={{ top: `${position.y}px`, left: `${position.x}px` }}>
+    <div className={styles.menu} style={{ top: `${position.y}px`, left: `${position.x}px` }}>
       <Menu>
         <MenuItem
           icon="intersection"

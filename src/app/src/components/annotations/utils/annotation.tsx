@@ -70,29 +70,15 @@ function GetAnnotationIntersection(
  * This function attaches a several crucial listeners to act on individual
  * annotation layers.
  */
-// export const AttachAnnotationHandlers = (
-//   drawmap: L.DrawMap,
-//   annotationGroup: L.FeatureGroup,
-//   layer: L.Layer | any,
-//   project: string,
-//   annotationID: string | undefined
-// ): PolylineObjectType => {
-//   /**
-//    * Obtain Annotation ID from Layer Attribution of AnnotationID is Undefined
-//    */
-
-//   // eslint-disable-next-line no-param-reassign
-//   (layer.options as any).annotationID = annotationID;
-//   return layer;
-// };
-
-
 export const AttachAnnotationHandlers = (
   drawmap: L.DrawMap,
   annotationGroup: L.FeatureGroup,
   layer: L.Layer | any,
   project: string,
-  annotationID: string | undefined
+  annotationID: string | undefined,
+  callbacks?: {
+    handleIntersect?: () => void;
+  } 
 ): PolylineObjectType => {
   let selectedAnnotation: PolylineObjectType | null = null;
   let otherAnnotation: PolylineObjectType | null = null;
@@ -105,7 +91,8 @@ export const AttachAnnotationHandlers = (
 
   // Add right-click event listener to the layer
   layer.on("contextmenu", (event: L.LeafletMouseEvent) => {
-    const menu = <AnnotationOptionsMenu x={event.latlng.lng} y={event.latlng.lat} onIntersect={handleIntersect} />;
+    event.originalEvent.preventDefault();
+    // const menu = <AnnotationOptionsMenu x={event.latlng.lng} y={event.latlng.lat} onIntersect={handleIntersect} />;
     // FIXME
     // document.appendChild(menu);
   });
@@ -157,7 +144,10 @@ export function RenderAssetAnnotations(
   project: string,
   assetWidth: number,
   assetHeight: number,
-  tags: { [tag: string]: number }
+  tags: { [tag: string]: number },
+  callbacks?: {
+    handleIntersect?: () => void;
+  } 
 ): Array<PolylineObjectType> {
   const polylineObjects: Array<PolylineObjectType> = [];
 
@@ -241,7 +231,8 @@ export function RenderAssetAnnotations(
         annotationGroup,
         PrimitiveObject(imageCoordinateBounds, primitiveOptions),
         project,
-        annotation.annotationID
+        annotation.annotationID,
+        callbacks,
       )
     );
   });

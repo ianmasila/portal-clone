@@ -544,6 +544,20 @@ export default class Annotator extends Component<
     if (this.selectedAnnotation) {
       this.selectedAnnotation.options.fillOpacity = 0.35;
       this.selectedAnnotation.fire("mouseout");
+      /* If annotation menu option was selected, update selection data */
+      if (this.state.annotationOptionsMenuSelection.selectedAnnotation) {
+        this.setState(prevState => {
+          return { 
+            annotationOptionsMenuSelection: {
+              ...prevState.annotationOptionsMenuSelection,
+              otherAnnotation: annotation,
+            }
+          }
+        }, 
+        // TODO: Show results of annotation menu option, e.g. show intersection polygon
+        // TODO: Clean up: remove annotation options menu selection
+        () => {});
+      }
     }
 
     /* Select new annotation */
@@ -1014,7 +1028,7 @@ export default class Annotator extends Component<
       const selection = prevState.annotationOptionsMenuSelection;
       if (key === "intersect") {
         selection.intersect = value.intersect;
-        selection.selectedAnnotation = this.selectedAnnotation
+        selection.selectedAnnotation = this.selectedAnnotation;
       }
      
       return { annotationOptionsMenuSelection: selection };
