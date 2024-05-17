@@ -41,8 +41,9 @@ const AnnotationOptionsMenu: React.FC<AnnotationOptionsMenuProps> = ({ position,
           onClick={() => {
             callbacks.handleAnnotationOptionsMenuSelection({
               intersect: true,
-            }, 'intersect')
+            }, 'intersect');
             setIsVisible(false);
+            alert("Select another annotation for Annotation Intersection");
           }}
         />
         <MenuItem

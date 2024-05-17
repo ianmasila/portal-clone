@@ -23,6 +23,7 @@ import makeEta from "simple-eta";
 import {
   PolylineObjectType,
   RenderAssetAnnotations,
+  GetAnnotationIntersection,
 } from "@portal/components/annotations/utils/annotation";
 
 import {
@@ -320,6 +321,9 @@ export default class Annotator extends Component<
     this.handleAnnotationOptionsMenuOpen = this.handleAnnotationOptionsMenuOpen.bind(
       this
     );
+    this.handleAnnotationOptionsMenuReset = this.handleAnnotationOptionsMenuReset.bind(
+      this
+    );
     this.handleAnnotationOptionsMenuClose = this.handleAnnotationOptionsMenuClose.bind(
       this
     );
@@ -481,6 +485,17 @@ export default class Annotator extends Component<
   private handleAnnotationOptionsMenuOpen() {
     this.setState({ annotationOptionsMenuOpen: true });
   }
+  private handleAnnotationOptionsMenuReset() {
+    this.setState({ 
+      annotationOptionsMenuOpen: false,
+      annotationOptionsMenuPosition: null,
+      annotationOptionsMenuSelection: {
+        intersect: false,
+        selectedAnnotation: null,
+        otherAnnotation: null,
+      }
+    });
+  }
 
   private handleFileManagementClose() {
     this.setState({ fileManagementOpen: false });
@@ -565,7 +580,28 @@ export default class Annotator extends Component<
         }, 
         // TODO: Show results of annotation menu option, e.g. show intersection polygon
         // TODO: Clean up: remove annotation options menu selection
-        () => {});
+        () => {
+          const isIntersect = this.state.annotationOptionsMenuSelection.intersect;
+          const selectedAnnotation = this.state.annotationOptionsMenuSelection.selectedAnnotation;
+          const otherAnnotation = this.state.annotationOptionsMenuSelection.otherAnnotation;
+
+          if (isIntersect) {
+            const intersection = GetAnnotationIntersection(
+              selectedAnnotation as L.Layer as PolylineObjectType,
+              otherAnnotation as L.Layer as PolylineObjectType,
+            );
+      
+            if (intersection) {
+              // FIXME: Highlight the intersection area with red border on the polygon
+              intersection.setStyle({ color: "red" });
+            } else {
+              alert("No intersection found");
+            }
+          }
+    
+          // Reset annotation options menu selection
+          this.handleAnnotationOptionsMenuReset();
+        })
       }
     }
 
@@ -1034,6 +1070,7 @@ export default class Annotator extends Component<
     });
   };
 
+  /* Handle right click events on annotations */
   private handleAnnotationRightClick = (event: L.LeafletMouseEvent, annotation: L.Layer) => {
     event.originalEvent.preventDefault();
     this.setState(prevState => {
@@ -1054,7 +1091,6 @@ export default class Annotator extends Component<
       const selection = prevState.annotationOptionsMenuSelection;
       if (key === "intersect") {
         selection.intersect = value.intersect;
-        selection.selectedAnnotation = this.selectedAnnotation;
       }
      
       return { annotationOptionsMenuSelection: selection };

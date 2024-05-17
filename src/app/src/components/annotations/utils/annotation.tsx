@@ -14,7 +14,6 @@ import {
   TagColours,
 } from "@portal/constants/annotation";
 import { AssetAPIObject } from "@portal/api/annotation";
-import AnnotationOptionsMenu from "../annotationoptionsmenu";
 
 /* Leaflet Annotation Type */
 export type PolylineObjectType = L.Polyline | L.Rectangle | L.Polygon;
@@ -46,7 +45,7 @@ export const GetAnnotationColour = (
 /**
  * Get intersection of two annotations with area
  */
-function GetAnnotationIntersection(
+export function GetAnnotationIntersection(
   annotation1: PolylineObjectType,
   annotation2: PolylineObjectType
 ): PolylineObjectType | null {
@@ -81,46 +80,14 @@ export const AttachAnnotationHandlers = (
     handleAnnotationOptionsMenuSelection?: (value: any, key: string) => void;
   } 
 ): PolylineObjectType => {
-  let selectedAnnotation: PolylineObjectType | null = null;
-  let otherAnnotation: PolylineObjectType | null = null;
-
-  // Prompt user to select another annotation to check for intersection
-  function handleIntersect() {
-    selectedAnnotation = layer;
-    alert("Select another annotation for Annotation Intersection");
-  };
-
   // Add right-click event listener to the layer
   layer.on("contextmenu", (event: L.LeafletMouseEvent) => {
     callbacks?.handleAnnotationRightClick?.(event, layer);
   });
 
-  // Add click event listener to the layer
-  // layer.on("click", (event: L.LeafletMouseEvent) => {
-  //   if (selectedAnnotation) {
-  //     otherAnnotation = layer;
-  //     const intersection = GetAnnotationIntersection(
-  //       selectedAnnotation,
-  //       otherAnnotation!
-  //     );
-
-  //     if (intersection) {
-  //       // FIXME: Highlight the intersection area with red border on the polygon
-  //       intersection.setStyle({ color: "red" });
-  //     } else {
-  //       alert("No intersection found");
-  //     }
-
-  //     // Reset selectedAnnotation and intersectedAnnotation for next selection
-  //     selectedAnnotation = null;
-  //     otherAnnotation = null;
-  //   }
-  // });
-
   /**
    * Obtain Annotation ID from Layer Attribution of AnnotationID is Undefined
    */
-
   // eslint-disable-next-line no-param-reassign
   (layer.options as any).annotationID = annotationID;
 
