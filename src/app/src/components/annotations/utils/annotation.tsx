@@ -86,6 +86,7 @@ function GetAnnotationIntersection(
 //   return layer;
 // };
 
+
 export const AttachAnnotationHandlers = (
   drawmap: L.DrawMap,
   annotationGroup: L.FeatureGroup,
@@ -94,46 +95,54 @@ export const AttachAnnotationHandlers = (
   annotationID: string | undefined
 ): PolylineObjectType => {
   let selectedAnnotation: PolylineObjectType | null = null;
-  let intersectedAnnotation: PolylineObjectType | null = null;
+  let otherAnnotation: PolylineObjectType | null = null;
+
+  // Prompt user to select another annotation to check for intersection
+  function handleIntersect(node) {
+    selectedAnnotation = layer;
+    alert("Select another annotation for Annotation Intersection");
+    handleClose(node)
+  };
+
+  // Unmount annotation options menu
+  function handleClose(node) {
+    document.removeChild(node)
+  };
+
 
   // Add right-click event listener to the layer
-  layer.on("contextmenu", (event) => {
-    const menu = (
-      <AnnotationOptionsMenu
-        x={event.layerX}
-        y={event.layerY}
-        onIntersect={() => handleIntersect(selectedAnnotation, intersectedAnnotation)}
-        onClose={handleClose}
-      />
-    );
-
-    ReactDOM.render(menu, document.body);
+  layer.on("contextmenu", (event: L.LeafletMouseEvent) => {
+    const menu = <AnnotationOptionsMenu x={event.latlng.lng} y={event.latlng.lat} onIntersection={handleIntersect} onClose={handleClose} annotation={layer} />;
+    // FIXME
+    document.appendChild(menu);
   });
 
   // Add click event listener to the layer
-  layer.on("click", (event) => {
-    if (!selectedAnnotation) {
-      selectedAnnotation = layer;
-    } else {
-      intersectedAnnotation = layer;
-      const intersectionArea = GetAnnotationIntersection(selectedAnnotation, intersectedAnnotation);
+  layer.on("click", (event: L.LeafletMouseEvent) => {
+    if (selectedAnnotation) {
+      otherAnnotation = layer;
+      const intersection = GetAnnotationIntersection(
+        selectedAnnotation,
+        otherAnnotation!
+      );
 
-      if (intersectionArea > 0) {
-        // Highlight the intersection area with red
-        intersectedAnnotation.setStyle({ color: "red" });
+      if (intersection) {
+        // FIXME: Highlight the intersection area with red border on the polygon
+        intersection.setStyle({ color: "red" });
       } else {
         alert("No intersection found");
       }
 
       // Reset selectedAnnotation and intersectedAnnotation for next selection
       selectedAnnotation = null;
-      intersectedAnnotation = null;
+      otherAnnotation = null;
     }
   });
-  
+
   /**
    * Obtain Annotation ID from Layer Attribution of AnnotationID is Undefined
    */
+
   // eslint-disable-next-line no-param-reassign
   (layer.options as any).annotationID = annotationID;
 
