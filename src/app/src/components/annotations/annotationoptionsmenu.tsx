@@ -1,42 +1,60 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Menu, MenuItem } from '@blueprintjs/core';
 import styles from './annotationoptionsmenu.module.css';
-import { PolylineObjectType } from './utils/annotation';
 
-interface OptionsMenuProps {
+interface AnnotationOptionsMenuProps {
   x: number;
   y: number;
-  layer: L.Layer | any,
-  onIntersect: () => void;
   onClose: () => void;
+  onIntersect: () => void;
+  callbacks: {
+    HandleAnnotationOptionsMenuSelection: (value: any, key: string) => void;
+  };
 }
 
-const AnnotationOptionsMenu: React.FC<OptionsMenuProps> = ({ x, y, layer, onIntersect, onClose}) => {
-  const [selectedAnnotation, setSelectedAnnotation] = useState<PolylineObjectType>();
-  const [otherAnnotation, setOtherAnnotation] = useState<PolylineObjectType>();
+const AnnotationOptionsMenu: React.FC<AnnotationOptionsMenuProps> = ({ x, y, onClose, onIntersect, callbacks }) => {
+  const [isVisible, setIsVisible] = useState(false);
+  const [position, setPosition] = useState({ x: 0, y: 0 });
 
-  const handleIntersect = () => {
-    onIntersect();
-  }
-  const handleClose = () => {
-    document.removeChild(layer);
-    onClose();
-  }
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (isVisible && !(event.target as HTMLElement).closest(styles.Menu)) {
+        setIsVisible(false);
+      }
+    };
+
+    document.addEventListener('click', handleClickOutside);
+
+    return () => {
+      document.removeEventListener('click', handleClickOutside);
+    };
+  }, [isVisible]);
+
+  const openMenu = (x: number, y: number) => {
+    setPosition({ x, y });
+    setIsVisible(true);
+  };
+
+  if (!isVisible) return null;
+
   return (
-    <div className={styles.Menu} style={{ top: y, left: x }}>
-        <Menu>
-            <MenuItem
-                icon="intersection"
-                text="Intersect"
-                onClick={handleIntersect}
-            />
-            <MenuItem
-                icon="cross"
-                text="Close"
-                onClick={handleClose}
-                style={{ position: 'absolute', top: '0', right: '0' }}
-            />
-        </Menu>
+    <div className={styles.Menu} style={{ top: `${position.y}px`, left: `${position.x}px` }}>
+      <Menu>
+        <MenuItem
+          icon="intersection"
+          text="Intersect"
+          onClick={() => {
+            onIntersect();
+            setIsVisible(false);
+          }}
+        />
+        <MenuItem
+          icon="cross"
+          text="Close"
+          onClick={onClose}
+          style={{ position: 'absolute', top: '0', right: '0' }}
+        />
+      </Menu>
     </div>
   );
 };

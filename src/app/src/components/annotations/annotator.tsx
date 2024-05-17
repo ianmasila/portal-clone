@@ -50,6 +50,8 @@ import AnnotatorSettings from "./utils/annotatorsettings";
 import FormatTimerSeconds from "./utils/timer";
 import { RegisteredModel } from "./model";
 
+import AnnotationOptionsMenu from "./annotationoptionsmenu";
+
 type Point = [number, number];
 type MapType = L.DrawMap;
 type VideoFrameMetadata = {
@@ -147,9 +149,21 @@ interface AnnotatorState {
     isOutlined: true;
     opacity: number;
   };
+  /* Annotation Options Menu Mode */
+  annotationOptionsMenuOpen: boolean;
+  annotationOptionsMenuSelection: {
+    intersect: boolean;
+    selectedAnnotation: L.Layer | null;
+    otherAnnotation: L.Layer | null;
+  };
   currAnnotationPlaybackId: number;
 }
 
+type AnnotationOptionsMenuSelection = {
+  intersect: boolean;
+  selectedAnnotation: L.Layer | null;
+  otherAnnotation: L.Layer | null;
+};
 /**
  * Annotations are Leaflet layers with additional
  * editing and options properties
@@ -234,6 +248,12 @@ export default class Annotator extends Component<
         isOutlined: true,
         opacity: 0.45,
       },
+      annotationOptionsMenuOpen: false,
+      annotationOptionsMenuSelection: {
+        intersect: false,
+        selectedAnnotation: null,
+        otherAnnotation: null,
+      },
       filterArr: [],
       alwaysShowLabel: false,
       showSelected: true,
@@ -287,6 +307,15 @@ export default class Annotator extends Component<
       this
     );
     this.handleAdvancedSettingsClose = this.handleAdvancedSettingsClose.bind(
+      this
+    );
+    this.handleAnnotationOptionsMenuOpen = this.handleAnnotationOptionsMenuOpen.bind(
+      this
+    );
+    this.handleAnnotationOptionsMenuClose = this.handleAnnotationOptionsMenuClose.bind(
+      this
+    );
+    this.handleAnnotationOptionsMenuSelection = this.handleAnnotationOptionsMenuSelection.bind(
       this
     );
     this.handlePlayPauseVideoOverlay = this.handlePlayPauseVideoOverlay.bind(
@@ -433,6 +462,17 @@ export default class Annotator extends Component<
   }
   private handleAdvancedSettingsOpen() {
     this.setState({ advancedSettingsOpen: true });
+  }
+
+  private handleAnnotationOptionsMenuClose() {
+    this.setState({ annotationOptionsMenuOpen: false });
+  }
+  private handleAnnotationOptionsMenuOpen() {
+    this.setState({ annotationOptionsMenuOpen: true });
+  }
+
+  private handleAnnotationOptionsMenuSelection(selection: AnnotationOptionsMenuSelection) {
+    this.setState({ annotationOptionsMenuSelection: selection });
   }
 
   private handleFileManagementClose() {
@@ -1682,6 +1722,20 @@ export default class Annotator extends Component<
                 allowUserClose={true}
                 callbacks={{
                   HandleChangeInSettings: this.handleChangeInAdvancedSettings,
+                }}
+                {...this.props}
+              />
+            ) : null}
+            {/* Annotation Options Menu */}
+            {this.state.annotationOptionsMenuOpen ? (
+              <AnnotationOptionsMenu
+                onClose={
+                  !this.state.annotationOptionsMenuOpen
+                    ? this.handleAnnotationOptionsMenuOpen
+                    : this.handleAnnotationOptionsMenuClose
+                }
+                callbacks={{
+                  HandleAnnotationOptionsMenuSelection: this.handleAnnotationOptionsMenuSelection,
                 }}
                 {...this.props}
               />

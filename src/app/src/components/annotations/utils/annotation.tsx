@@ -98,23 +98,16 @@ export const AttachAnnotationHandlers = (
   let otherAnnotation: PolylineObjectType | null = null;
 
   // Prompt user to select another annotation to check for intersection
-  function handleIntersect(node) {
+  function handleIntersect() {
     selectedAnnotation = layer;
     alert("Select another annotation for Annotation Intersection");
-    handleClose(node)
   };
-
-  // Unmount annotation options menu
-  function handleClose(node) {
-    document.removeChild(node)
-  };
-
 
   // Add right-click event listener to the layer
   layer.on("contextmenu", (event: L.LeafletMouseEvent) => {
-    const menu = <AnnotationOptionsMenu x={event.latlng.lng} y={event.latlng.lat} onIntersection={handleIntersect} onClose={handleClose} annotation={layer} />;
+    const menu = <AnnotationOptionsMenu x={event.latlng.lng} y={event.latlng.lat} onIntersect={handleIntersect} />;
     // FIXME
-    document.appendChild(menu);
+    // document.appendChild(menu);
   });
 
   // Add click event listener to the layer
