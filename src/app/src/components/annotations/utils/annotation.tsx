@@ -7,12 +7,14 @@
  * annotation format to leaflet-polyline objects. And vice-versa.
  */
 import * as L from "leaflet";
+import * as turf from '@turf/turf';
 
 import {
   PrimitiveShapeOptions,
   TagColours,
 } from "@portal/constants/annotation";
 import { AssetAPIObject } from "@portal/api/annotation";
+import AnnotationOptionsMenu from "../annotationoptionsmenu";
 
 /* Leaflet Annotation Type */
 export type PolylineObjectType = L.Polyline | L.Rectangle | L.Polygon;
@@ -42,43 +44,26 @@ export const GetAnnotationColour = (
 };
 
 /**
- * Get intersection of two annotations
+ * Get intersection of two annotations with area
  */
 function GetAnnotationIntersection(
   annotation1: PolylineObjectType,
   annotation2: PolylineObjectType
-) {
-  const intersectedObjects: PolylineObjectType[] = [];
+): PolylineObjectType | null {
+  const poly1 = annotation1 as L.Polygon;
+  const poly2 = annotation2 as L.Polygon;
 
-  if (annotation1 instanceof L.Polyline && annotation2 instanceof L.Polyline) {
-    const latLngs1 = (annotation1 as L.Polyline).getLatLngs() as L.LatLng[];
-    const latLngs2 = (annotation2 as L.Polyline).getLatLngs() as L.LatLng[];
+  const poly1GeoJSON = poly1.toGeoJSON();
+  const poly2GeoJSON = poly2.toGeoJSON();
 
-    // Find common points
-    const intersectionPoints = latLngs1.filter(point1 =>
-      latLngs2.some(point2 => point1.equals(point2))
-    );
+  const intersection = turf.intersect(poly1GeoJSON, poly2GeoJSON);
 
-    return intersectionPoints;
+  if (intersection && intersection.geometry.type === 'Polygon') {
+    const coordinates = intersection.geometry.coordinates[0].map(([lng, lat]) => L.latLng(lat, lng));
+    return new L.Polygon(coordinates, PrimitiveShapeOptions) as L.Polygon;
   }
 
-  // Get intersection points between polygons
-  const intersectionPoints = poly1.getLatLngs().flatMap(point => {
-      if (poly2.getBounds().contains(point)) {
-        return [point];
-      }
-      return [];
-    });
-
-    // Calculate area of intersection polygon
-    if (intersectionPoints.length > 2) {
-      const intersectionPolygon = new L.Polygon(intersectionPoints) as L.Polygon;
-      intersectedObjects.push(intersectionPolygon);
-    }
-  
-
-  // Return intersected objects
-  return intersectedObjects;
+  return null;
 }
 
 /**
@@ -112,34 +97,26 @@ export const AttachAnnotationHandlers = (
   let intersectedAnnotation: PolylineObjectType | null = null;
 
   // Add right-click event listener to the layer
-  layer.on("contextmenu", (event: L.LeafletMouseEvent) => {
-    const intersect = "Get intersection"; // Calculate intersect value here
-    const popupContent = `<b>Options</b><br>Intersect: ${intersect}`;
-    L.popup()
-      .setLatLng(event.latlng)
-      .setContent(popupContent)
-      .openOn(drawmap);
+  layer.on("contextmenu", (event) => {
+    const menu = (
+      <AnnotationOptionsMenu
+        x={event.layerX}
+        y={event.layerY}
+        onIntersect={() => handleIntersect(selectedAnnotation, intersectedAnnotation)}
+        onClose={handleClose}
+      />
+    );
 
-    // Listen for click events on the "Intersect" option
-    if (document) {
-      document
-        .querySelector(".leaflet-popup-content b")
-        ?.addEventListener("click", () => {
-          alert("Select another annotation for Annotation Intersection");
-        });
-    }
+    ReactDOM.render(menu, document.body);
   });
 
   // Add click event listener to the layer
-  layer.on("click", (event: L.LeafletMouseEvent) => {
+  layer.on("click", (event) => {
     if (!selectedAnnotation) {
       selectedAnnotation = layer;
     } else {
       intersectedAnnotation = layer;
-      const intersectionArea = GetAnnotationIntersection(
-        selectedAnnotation,
-        intersectedAnnotation
-      );
+      const intersectionArea = GetAnnotationIntersection(selectedAnnotation, intersectedAnnotation);
 
       if (intersectionArea > 0) {
         // Highlight the intersection area with red
@@ -153,7 +130,7 @@ export const AttachAnnotationHandlers = (
       intersectedAnnotation = null;
     }
   });
-
+  
   /**
    * Obtain Annotation ID from Layer Attribution of AnnotationID is Undefined
    */
