@@ -153,17 +153,19 @@ interface AnnotatorState {
   annotationOptionsMenuOpen: boolean;
   annotationOptionsMenuSelection: {
     intersect: boolean;
-    selectedAnnotation: L.Layer | null;
-    otherAnnotation: L.Layer | null;
+    selectedAnnotation: AnnotationLayer | null;
+    otherAnnotation: AnnotationLayer | null;
   };
   currAnnotationPlaybackId: number;
 }
 
-type AnnotationOptionsMenuSelection = {
-  intersect: boolean;
-  selectedAnnotation: L.Layer | null;
-  otherAnnotation: L.Layer | null;
-};
+// TODO: DELETE
+// type AnnotationOptionsMenuSelection = {
+//   intersect: boolean;
+//   selectedAnnotation: L.Layer | null;
+//   otherAnnotation: L.Layer | null;
+// };
+
 /**
  * Annotations are Leaflet layers with additional
  * editing and options properties
@@ -469,10 +471,6 @@ export default class Annotator extends Component<
   }
   private handleAnnotationOptionsMenuOpen() {
     this.setState({ annotationOptionsMenuOpen: true });
-  }
-
-  private handleAnnotationOptionsMenuSelection(selection: AnnotationOptionsMenuSelection) {
-    this.setState({ annotationOptionsMenuSelection: selection });
   }
 
   private handleFileManagementClose() {
@@ -1007,6 +1005,19 @@ export default class Annotator extends Component<
         settings.iou = value;
       }
       return { inferenceOptions: settings };
+    });
+  };
+
+  /* For now, we only support `intersect` */
+  private handleAnnotationOptionsMenuSelection = (value: any, key: string) => {
+    this.setState(prevState => {
+      const selection = prevState.annotationOptionsMenuSelection;
+      if (key === "intersect") {
+        selection.intersect = value.intersect;
+        selection.selectedAnnotation = this.selectedAnnotation
+      }
+     
+      return { annotationOptionsMenuSelection: selection };
     });
   };
 

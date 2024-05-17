@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Menu, MenuItem } from '@blueprintjs/core';
 import styles from './annotationoptionsmenu.module.css';
+import { intersect } from '@turf/turf';
 
 interface AnnotationOptionsMenuProps {
   x: number;
@@ -44,7 +45,9 @@ const AnnotationOptionsMenu: React.FC<AnnotationOptionsMenuProps> = ({ x, y, onC
           icon="intersection"
           text="Intersect"
           onClick={() => {
-            onIntersect();
+            callbacks.HandleAnnotationOptionsMenuSelection({
+              intersect: true,
+            }, 'intersect')
             setIsVisible(false);
           }}
         />
