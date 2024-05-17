@@ -47,16 +47,23 @@ export const GetAnnotationColour = (
 function GetAnnotationIntersection(
   annotation1: PolylineObjectType,
   annotation2: PolylineObjectType
-): PolylineObjectType[] {
+) {
   const intersectedObjects: PolylineObjectType[] = [];
 
-  // Check if annotations are polygons
-  if (annotation1 instanceof L.Polygon && annotation2 instanceof L.Polygon) {
-    const poly1 = annotation1 as L.Polygon;
-    const poly2 = annotation2 as L.Polygon;
+  if (annotation1 instanceof L.Polyline && annotation2 instanceof L.Polyline) {
+    const latLngs1 = (annotation1 as L.Polyline).getLatLngs() as L.LatLng[];
+    const latLngs2 = (annotation2 as L.Polyline).getLatLngs() as L.LatLng[];
 
-    // Get intersection points between polygons
-    const intersectionPoints = poly1.getLatLngs().flatMap(point => {
+    // Find common points
+    const intersectionPoints = latLngs1.filter(point1 =>
+      latLngs2.some(point2 => point1.equals(point2))
+    );
+
+    return intersectionPoints;
+  }
+
+  // Get intersection points between polygons
+  const intersectionPoints = poly1.getLatLngs().flatMap(point => {
       if (poly2.getBounds().contains(point)) {
         return [point];
       }
@@ -68,7 +75,7 @@ function GetAnnotationIntersection(
       const intersectionPolygon = new L.Polygon(intersectionPoints) as L.Polygon;
       intersectedObjects.push(intersectionPolygon);
     }
-  }
+  
 
   // Return intersected objects
   return intersectedObjects;
