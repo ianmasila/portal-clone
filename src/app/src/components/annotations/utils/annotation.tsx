@@ -77,7 +77,8 @@ export const AttachAnnotationHandlers = (
   project: string,
   annotationID: string | undefined,
   callbacks?: {
-    handleIntersect?: () => void;
+    handleAnnotationRightClick?: (event: L.LeafletMouseEvent, annotation: L.Layer) => void;
+    handleAnnotationOptionsMenuSelection?: (value: any, key: string) => void;
   } 
 ): PolylineObjectType => {
   let selectedAnnotation: PolylineObjectType | null = null;
@@ -91,33 +92,30 @@ export const AttachAnnotationHandlers = (
 
   // Add right-click event listener to the layer
   layer.on("contextmenu", (event: L.LeafletMouseEvent) => {
-    event.originalEvent.preventDefault();
-    // const menu = <AnnotationOptionsMenu x={event.latlng.lng} y={event.latlng.lat} onIntersect={handleIntersect} />;
-    // FIXME
-    // document.appendChild(menu);
+    callbacks?.handleAnnotationRightClick?.(event, layer);
   });
 
   // Add click event listener to the layer
-  layer.on("click", (event: L.LeafletMouseEvent) => {
-    if (selectedAnnotation) {
-      otherAnnotation = layer;
-      const intersection = GetAnnotationIntersection(
-        selectedAnnotation,
-        otherAnnotation!
-      );
+  // layer.on("click", (event: L.LeafletMouseEvent) => {
+  //   if (selectedAnnotation) {
+  //     otherAnnotation = layer;
+  //     const intersection = GetAnnotationIntersection(
+  //       selectedAnnotation,
+  //       otherAnnotation!
+  //     );
 
-      if (intersection) {
-        // FIXME: Highlight the intersection area with red border on the polygon
-        intersection.setStyle({ color: "red" });
-      } else {
-        alert("No intersection found");
-      }
+  //     if (intersection) {
+  //       // FIXME: Highlight the intersection area with red border on the polygon
+  //       intersection.setStyle({ color: "red" });
+  //     } else {
+  //       alert("No intersection found");
+  //     }
 
-      // Reset selectedAnnotation and intersectedAnnotation for next selection
-      selectedAnnotation = null;
-      otherAnnotation = null;
-    }
-  });
+  //     // Reset selectedAnnotation and intersectedAnnotation for next selection
+  //     selectedAnnotation = null;
+  //     otherAnnotation = null;
+  //   }
+  // });
 
   /**
    * Obtain Annotation ID from Layer Attribution of AnnotationID is Undefined
@@ -146,7 +144,8 @@ export function RenderAssetAnnotations(
   assetHeight: number,
   tags: { [tag: string]: number },
   callbacks?: {
-    handleIntersect?: () => void;
+    handleAnnotationRightClick?: (event: L.LeafletMouseEvent, annotation: L.Layer) => void;
+    handleAnnotationOptionsMenuSelection?: (value: any, key: string) => void;
   } 
 ): Array<PolylineObjectType> {
   const polylineObjects: Array<PolylineObjectType> = [];

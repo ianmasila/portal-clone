@@ -151,6 +151,11 @@ interface AnnotatorState {
   };
   /* Annotation Options Menu Mode */
   annotationOptionsMenuOpen: boolean;
+  /* Cursor click position prompting annotation options menu */
+  annotationOptionsMenuPosition: {
+    x: number;
+    y: number;
+  } | null;
   annotationOptionsMenuSelection: {
     intersect: boolean;
     selectedAnnotation: AnnotationLayer | null;
@@ -251,6 +256,7 @@ export default class Annotator extends Component<
         opacity: 0.45,
       },
       annotationOptionsMenuOpen: false,
+      annotationOptionsMenuPosition: null,
       annotationOptionsMenuSelection: {
         intersect: false,
         selectedAnnotation: null,
@@ -318,6 +324,9 @@ export default class Annotator extends Component<
       this
     );
     this.handleAnnotationOptionsMenuSelection = this.handleAnnotationOptionsMenuSelection.bind(
+      this
+    );
+    this.handleAnnotationRightClick = this.handleAnnotationRightClick.bind(
       this
     );
     this.handlePlayPauseVideoOverlay = this.handlePlayPauseVideoOverlay.bind(
@@ -920,7 +929,10 @@ export default class Annotator extends Component<
       this.currentAsset.metadata.width,
       this.currentAsset.metadata.height,
       // eslint-disable-next-line react/no-access-state-in-setstate
-      this.state.tagInfo.tags
+      this.state.tagInfo.tags,
+      {
+        handleAnnotationRightClick: this.handleAnnotationRightClick,
+      }
     );
 
     this.annotationGroup.clearLayers();
@@ -1020,6 +1032,20 @@ export default class Annotator extends Component<
       }
       return { inferenceOptions: settings };
     });
+  };
+
+  private handleAnnotationRightClick = (event: L.LeafletMouseEvent, annotation: L.Layer) => {
+    event.originalEvent.preventDefault();
+    this.setState(prevState => {
+      return {
+        annotationOptionsMenuOpen: true,
+        annotationOptionsMenuPosition: { x: event.originalEvent.clientX, y: event.originalEvent.clientY },
+        annotationOptionsMenuSelection: {
+          ...prevState.annotationOptionsMenuSelection,
+          selectedAnnotation: annotation as AnnotationLayer,
+        }
+      }
+    })
   };
 
   /* For now, we only support `intersect` */
@@ -1754,13 +1780,14 @@ export default class Annotator extends Component<
             {/* Annotation Options Menu */}
             {this.state.annotationOptionsMenuOpen ? (
               <AnnotationOptionsMenu
+                position={this.state.annotationOptionsMenuPosition}
                 onClose={
                   !this.state.annotationOptionsMenuOpen
                     ? this.handleAnnotationOptionsMenuOpen
                     : this.handleAnnotationOptionsMenuClose
                 }
                 callbacks={{
-                  HandleAnnotationOptionsMenuSelection: this.handleAnnotationOptionsMenuSelection,
+                  handleAnnotationOptionsMenuSelection: this.handleAnnotationOptionsMenuSelection,
                 }}
                 {...this.props}
               />
