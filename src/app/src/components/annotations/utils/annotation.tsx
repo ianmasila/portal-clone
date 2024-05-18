@@ -82,9 +82,6 @@ export const AttachAnnotationHandlers = (
 ): PolylineObjectType => {
   // Add right-click event listener to the layer
   layer.on("contextmenu", (event: L.LeafletMouseEvent) => {
-    console.log("🚀 ~ layer.on ~ contextmenu event:", event)
-    console.log("🚀 ~ layer.on ~ contextmenu layer:", layer)
-    console.log("🚀 ~ layer.on ~ handleAnnotationRightClick:", callbacks?.handleAnnotationRightClick)
     callbacks?.handleAnnotationRightClick?.(event, layer);
   });
 

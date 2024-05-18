@@ -15,25 +15,30 @@ interface AnnotationOptionsMenuProps {
 
 const AnnotationOptionsMenu: React.FC<AnnotationOptionsMenuProps> = ({ position, onClose, callbacks }) => {
   const [isVisible, setIsVisible] = useState(false);
-
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (isVisible && !(event.target as HTMLElement).closest(styles.menu)) {
-        setIsVisible(false);
-      }
-    };
+    if (position) {
+      setIsVisible(true);
+    }
+  }, [position])
 
-    document.addEventListener('click', handleClickOutside);
+  // useEffect(() => {
+  //   const handleClickOutside = (event: MouseEvent) => {
+  //     if (isVisible && !(event.target as HTMLElement).closest(styles.menu)) {
+  //       setIsVisible(false);
+  //     }
+  //   };
 
-    return () => {
-      document.removeEventListener('click', handleClickOutside);
-    };
-  }, [isVisible]);
+  //   document.addEventListener('click', handleClickOutside);
+
+  //   return () => {
+  //     document.removeEventListener('click', handleClickOutside);
+  //   };
+  // }, [isVisible]);
 
   if (!isVisible || !position) return null;
 
   return (
-    <div className={styles.menu} style={{ top: `${position.x}px`, left: `${position.y}px` }}>
+    <div className={styles.menu} style={{ top: `${position.y - 21}px`, left: `${position.x + 24}px` }}>
       <Menu>
         <MenuItem
           icon="intersection"
@@ -46,12 +51,12 @@ const AnnotationOptionsMenu: React.FC<AnnotationOptionsMenuProps> = ({ position,
             alert("Select another annotation for Annotation Intersection");
           }}
         />
-        <MenuItem
-          icon="cross"
-          text="Close"
-          onClick={onClose}
-          style={{ position: 'absolute', top: '0', right: '0' }}
-        />
+        <div className={styles.closebutton} >
+          <MenuItem
+            icon="cross"
+            onClick={onClose}
+          />
+        </div>
       </Menu>
     </div>
   );

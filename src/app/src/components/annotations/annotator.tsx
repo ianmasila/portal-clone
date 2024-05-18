@@ -1074,15 +1074,20 @@ export default class Annotator extends Component<
   private handleAnnotationRightClick = (event: L.LeafletMouseEvent, annotation: L.Layer) => {
     console.log("🚀 ~ handleAnnotationRightClick in Annotator:")
     console.log("🚀 ~ annotation:", annotation)
-    console.log("🚀 ~ event:", event)
+    console.log("🚀 ~ event:", event.latlng)
     console.log("🚀 ~ event.originalEvent.clientX:", event.originalEvent.clientX)
     console.log("🚀 ~ event.originalEvent.clientY:", event.originalEvent.clientY)
 
     event.originalEvent.preventDefault();
+    const point = this.map.latLngToContainerPoint(event.latlng);
+    const x = point.x;
+    const y = point.y;
+    // const x = event.originalEvent.clientX;
+    // const y = event.originalEvent.clientY;
     this.setState(prevState => {
       return {
         annotationOptionsMenuOpen: true,
-        annotationOptionsMenuPosition: { x: event.originalEvent.clientX, y: event.originalEvent.clientY },
+        annotationOptionsMenuPosition: { x, y },
         annotationOptionsMenuSelection: {
           ...prevState.annotationOptionsMenuSelection,
           selectedAnnotation: annotation as AnnotationLayer,
