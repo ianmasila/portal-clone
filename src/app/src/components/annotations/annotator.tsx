@@ -321,13 +321,13 @@ export default class Annotator extends Component<
     this.handleAnnotationOptionsMenuOpen = this.handleAnnotationOptionsMenuOpen.bind(
       this
     );
-    this.handleAnnotationOptionsMenuReset = this.handleAnnotationOptionsMenuReset.bind(
-      this
-    );
     this.handleAnnotationOptionsMenuClose = this.handleAnnotationOptionsMenuClose.bind(
       this
     );
     this.handleAnnotationOptionsMenuSelection = this.handleAnnotationOptionsMenuSelection.bind(
+      this
+    );
+    this.handleAnnotationOptionsMenuReset = this.handleAnnotationOptionsMenuReset.bind(
       this
     );
     this.handleAnnotationRightClick = this.handleAnnotationRightClick.bind(
@@ -1072,6 +1072,12 @@ export default class Annotator extends Component<
 
   /* Handle right click events on annotations */
   private handleAnnotationRightClick = (event: L.LeafletMouseEvent, annotation: L.Layer) => {
+    console.log("🚀 ~ handleAnnotationRightClick in Annotator:")
+    console.log("🚀 ~ annotation:", annotation)
+    console.log("🚀 ~ event:", event)
+    console.log("🚀 ~ event.originalEvent.clientX:", event.originalEvent.clientX)
+    console.log("🚀 ~ event.originalEvent.clientY:", event.originalEvent.clientY)
+
     event.originalEvent.preventDefault();
     this.setState(prevState => {
       return {
