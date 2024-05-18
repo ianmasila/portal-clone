@@ -447,6 +447,30 @@ export default class Annotator extends Component<
       });
       (this.annotationGroup as any).tags = this.state.tagInfo.tags;
     }
+
+    /* Show results of annotation menu option, e.g. show intersection polygon */
+    const annotationOptionsSelectedAnnotation = this.state.annotationOptionsMenuSelection.selectedAnnotation;
+    const annotationOptionsOtherAnnotation = this.state.annotationOptionsMenuSelection.otherAnnotation;
+    const annotationOptionsIsIntersect = this.state.annotationOptionsMenuSelection.intersect;
+
+    if (annotationOptionsSelectedAnnotation && annotationOptionsOtherAnnotation) {
+      if (annotationOptionsIsIntersect) {
+        const intersection = GetAnnotationIntersection(
+          annotationOptionsSelectedAnnotation as L.Layer as PolylineObjectType,
+          annotationOptionsOtherAnnotation as L.Layer as PolylineObjectType,
+        );
+  
+        if (intersection) {
+          // FIXME: Highlight the intersection area with red border on the polygon
+          intersection.setStyle({ color: "red" });
+        } else {
+          alert("No intersection found");
+        }
+      }
+    
+      // Reset annotation options menu selection
+      this.handleAnnotationOptionsMenuReset();
+    }
   }
 
   componentWillUnmount(): void {
@@ -577,30 +601,6 @@ export default class Annotator extends Component<
               otherAnnotation: annotation,
             }
           }
-        }, 
-        // TODO: Show results of annotation menu option, e.g. show intersection polygon
-        // TODO: Clean up: remove annotation options menu selection
-        () => {
-          const isIntersect = this.state.annotationOptionsMenuSelection.intersect;
-          const selectedAnnotation = this.state.annotationOptionsMenuSelection.selectedAnnotation;
-          const otherAnnotation = this.state.annotationOptionsMenuSelection.otherAnnotation;
-
-          if (isIntersect) {
-            const intersection = GetAnnotationIntersection(
-              selectedAnnotation as L.Layer as PolylineObjectType,
-              otherAnnotation as L.Layer as PolylineObjectType,
-            );
-      
-            if (intersection) {
-              // FIXME: Highlight the intersection area with red border on the polygon
-              intersection.setStyle({ color: "red" });
-            } else {
-              alert("No intersection found");
-            }
-          }
-    
-          // Reset annotation options menu selection
-          this.handleAnnotationOptionsMenuReset();
         })
       }
     }
