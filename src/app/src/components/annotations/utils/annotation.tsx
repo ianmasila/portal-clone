@@ -78,12 +78,19 @@ export const AttachAnnotationHandlers = (
   annotationID: string | undefined,
   callbacks?: {
     handleAnnotationRightClick?: (event: L.LeafletMouseEvent, annotation: L.Layer) => void;
-    handleAnnotationOptionsMenuSelection?: (value: any, key: string) => void;
+    handleAnnotationLeftClick?: (event: L.LeafletMouseEvent, annotation: L.Layer) => void;
   } 
 ): PolylineObjectType => {
   // Add right-click event listener to the layer
   layer.on("contextmenu", (event: L.LeafletMouseEvent) => {
     callbacks?.handleAnnotationRightClick?.(event, layer);
+  });
+  // Add left-click event listener to the layer
+  layer.on("click", (event: L.LeafletMouseEvent) => {
+    // TODO: Ensure click event is ignored if parent event was right click
+    if (event.type !== "contextmenu") {
+      callbacks?.handleAnnotationLeftClick?.(event, layer);
+    }
   });
 
   /**
@@ -113,7 +120,7 @@ export function RenderAssetAnnotations(
   tags: { [tag: string]: number },
   callbacks?: {
     handleAnnotationRightClick?: (event: L.LeafletMouseEvent, annotation: L.Layer) => void;
-    handleAnnotationOptionsMenuSelection?: (value: any, key: string) => void;
+    handleAnnotationLeftClick?: (event: L.LeafletMouseEvent, annotation: L.Layer) => void;
   } 
 ): Array<PolylineObjectType> {
   const polylineObjects: Array<PolylineObjectType> = [];

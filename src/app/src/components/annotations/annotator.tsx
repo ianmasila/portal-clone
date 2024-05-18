@@ -333,6 +333,9 @@ export default class Annotator extends Component<
     this.handleAnnotationRightClick = this.handleAnnotationRightClick.bind(
       this
     );
+    this.handleAnnotationLeftClick = this.handleAnnotationLeftClick.bind(
+      this
+    );
     this.handlePlayPauseVideoOverlay = this.handlePlayPauseVideoOverlay.bind(
       this
     );
@@ -404,6 +407,7 @@ export default class Annotator extends Component<
 
   // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
   componentDidUpdate() {
+    console.log('componentDidUpdate annotation options menu selection', this.state.annotationOptionsMenuSelection);
     /* Obtain Tag Map for loaded Model */
     /* The conditional checks are necessary due to the use of setStates */
     if (
@@ -448,7 +452,8 @@ export default class Annotator extends Component<
       (this.annotationGroup as any).tags = this.state.tagInfo.tags;
     }
 
-    /* Show results of annotation menu option, e.g. show intersection polygon */
+    /* Results of annotation menu option, e.g. show intersection polygon */
+    /* @TODO: Show results on canvas */
     const annotationOptionsSelectedAnnotation = this.state.annotationOptionsMenuSelection.selectedAnnotation;
     const annotationOptionsOtherAnnotation = this.state.annotationOptionsMenuSelection.otherAnnotation;
     const annotationOptionsIsIntersect = this.state.annotationOptionsMenuSelection.intersect;
@@ -594,19 +599,6 @@ export default class Annotator extends Component<
     if (this.selectedAnnotation) {
       this.selectedAnnotation.options.fillOpacity = 0.35;
       this.selectedAnnotation.fire("mouseout");
-      
-      /* If annotation menu option was selected, update selection data */
-      if (this.state.annotationOptionsMenuSelection.selectedAnnotation) {
-        console.log("🚀 ~ setSelectedAnnotation ~ annotation options selectedAnnotation:", this.state.annotationOptionsMenuSelection.selectedAnnotation)
-        this.setState(prevState => {
-          return { 
-            annotationOptionsMenuSelection: {
-              ...prevState.annotationOptionsMenuSelection,
-              otherAnnotation: annotation,
-            }
-          }
-        })
-      }
     }
 
     /* Select new annotation */
@@ -972,6 +964,7 @@ export default class Annotator extends Component<
       this.state.tagInfo.tags,
       {
         handleAnnotationRightClick: this.handleAnnotationRightClick,
+        handleAnnotationLeftClick: this.handleAnnotationLeftClick,
       }
     );
 
@@ -1076,17 +1069,12 @@ export default class Annotator extends Component<
 
   /* Handle right click events on annotations */
   private handleAnnotationRightClick = (event: L.LeafletMouseEvent, annotation: L.Layer) => {
-    // console.log("🚀 ~ handleAnnotationRightClick in Annotator:")
-    // console.log("🚀 ~ annotation:", annotation)
-    // console.log("🚀 ~ event:", event.latlng)
-    // console.log("🚀 ~ event.originalEvent.clientX:", event.originalEvent.clientX)
-    // console.log("🚀 ~ event.originalEvent.clientY:", event.originalEvent.clientY)
+    console.log("right click", event.type);
     event.originalEvent.preventDefault();
+    event.originalEvent.stopPropagation();
     const point = this.map.latLngToContainerPoint(event.latlng);
     const x = point.x;
     const y = point.y;
-    // const x = event.originalEvent.clientX;
-    // const y = event.originalEvent.clientY;
     this.setState(prevState => {
       return {
         annotationOptionsMenuOpen: true,
@@ -1097,6 +1085,26 @@ export default class Annotator extends Component<
         }
       }
     })
+  };
+
+  /* Handle left click events on annotations */
+  private handleAnnotationLeftClick = (event: L.LeafletMouseEvent, annotation: L.Layer) => {
+    console.log("left click", event.type);
+    if (this.state.annotationOptionsMenuOpen) {
+      return;
+    };
+    /* If annotation menu option was selected, update selection data */
+    const annotationOptionsSelectedAnnotation = this.state.annotationOptionsMenuSelection.selectedAnnotation;
+    if (annotationOptionsSelectedAnnotation) {
+      this.setState(prevState => {
+        return { 
+          annotationOptionsMenuSelection: {
+            ...prevState.annotationOptionsMenuSelection,
+            otherAnnotation: annotation as AnnotationLayer, 
+          }
+        }
+      })
+    }
   };
 
   /* For now, we only support `intersect` */
