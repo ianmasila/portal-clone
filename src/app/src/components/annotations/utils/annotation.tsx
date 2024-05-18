@@ -49,6 +49,7 @@ export function GetAnnotationIntersection(
   annotation1: PolylineObjectType,
   annotation2: PolylineObjectType
 ): PolylineObjectType | null {
+  console.log("🚀 ~ GetAnnotationIntersection...")
   const poly1 = annotation1 as L.Polygon;
   const poly2 = annotation2 as L.Polygon;
 

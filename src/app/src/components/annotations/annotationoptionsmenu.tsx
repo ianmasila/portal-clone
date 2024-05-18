@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { Menu, MenuItem } from '@blueprintjs/core';
 import styles from './annotationoptionsmenu.module.css';
 
@@ -14,28 +14,9 @@ interface AnnotationOptionsMenuProps {
 }
 
 const AnnotationOptionsMenu: React.FC<AnnotationOptionsMenuProps> = ({ position, onClose, callbacks }) => {
-  const [isVisible, setIsVisible] = useState(false);
-  useEffect(() => {
-    if (position) {
-      setIsVisible(true);
-    }
-  }, [position])
-
-  // useEffect(() => {
-  //   const handleClickOutside = (event: MouseEvent) => {
-  //     if (isVisible && !(event.target as HTMLElement).closest(styles.menu)) {
-  //       setIsVisible(false);
-  //     }
-  //   };
-
-  //   document.addEventListener('click', handleClickOutside);
-
-  //   return () => {
-  //     document.removeEventListener('click', handleClickOutside);
-  //   };
-  // }, [isVisible]);
-
-  if (!isVisible || !position) return null;
+  if (!position) {
+    return null;
+  }
 
   return (
     <div className={styles.menu} style={{ top: `${position.y - 21}px`, left: `${position.x + 24}px` }}>
@@ -47,7 +28,7 @@ const AnnotationOptionsMenu: React.FC<AnnotationOptionsMenuProps> = ({ position,
             callbacks.handleAnnotationOptionsMenuSelection({
               intersect: true,
             }, 'intersect');
-            setIsVisible(false);
+            onClose();
             alert("Select another annotation for Annotation Intersection");
           }}
         />

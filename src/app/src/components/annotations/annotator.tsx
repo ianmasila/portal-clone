@@ -455,10 +455,12 @@ export default class Annotator extends Component<
 
     if (annotationOptionsSelectedAnnotation && annotationOptionsOtherAnnotation) {
       if (annotationOptionsIsIntersect) {
+        console.log("🚀 ~ componentDidUpdate ~ annotationOptionsIsIntersect:", annotationOptionsIsIntersect)
         const intersection = GetAnnotationIntersection(
           annotationOptionsSelectedAnnotation as L.Layer as PolylineObjectType,
           annotationOptionsOtherAnnotation as L.Layer as PolylineObjectType,
         );
+        console.log("🚀 ~ componentDidUpdate ~ intersection:", intersection)
   
         if (intersection) {
           // FIXME: Highlight the intersection area with red border on the polygon
@@ -592,8 +594,10 @@ export default class Annotator extends Component<
     if (this.selectedAnnotation) {
       this.selectedAnnotation.options.fillOpacity = 0.35;
       this.selectedAnnotation.fire("mouseout");
+      
       /* If annotation menu option was selected, update selection data */
       if (this.state.annotationOptionsMenuSelection.selectedAnnotation) {
+        console.log("🚀 ~ setSelectedAnnotation ~ annotation options selectedAnnotation:", this.state.annotationOptionsMenuSelection.selectedAnnotation)
         this.setState(prevState => {
           return { 
             annotationOptionsMenuSelection: {
@@ -1072,12 +1076,11 @@ export default class Annotator extends Component<
 
   /* Handle right click events on annotations */
   private handleAnnotationRightClick = (event: L.LeafletMouseEvent, annotation: L.Layer) => {
-    console.log("🚀 ~ handleAnnotationRightClick in Annotator:")
-    console.log("🚀 ~ annotation:", annotation)
-    console.log("🚀 ~ event:", event.latlng)
-    console.log("🚀 ~ event.originalEvent.clientX:", event.originalEvent.clientX)
-    console.log("🚀 ~ event.originalEvent.clientY:", event.originalEvent.clientY)
-
+    // console.log("🚀 ~ handleAnnotationRightClick in Annotator:")
+    // console.log("🚀 ~ annotation:", annotation)
+    // console.log("🚀 ~ event:", event.latlng)
+    // console.log("🚀 ~ event.originalEvent.clientX:", event.originalEvent.clientX)
+    // console.log("🚀 ~ event.originalEvent.clientY:", event.originalEvent.clientY)
     event.originalEvent.preventDefault();
     const point = this.map.latLngToContainerPoint(event.latlng);
     const x = point.x;
