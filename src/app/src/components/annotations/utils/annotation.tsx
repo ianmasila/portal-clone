@@ -55,7 +55,9 @@ export function GetAnnotationIntersection(
   if (intersection && intersection.geometry.type === 'Polygon') {
     const primitiveOptions = PrimitiveShapeOptions;
     const options1 = annotation1.options as any;
+    console.log("🚀 ~ options1:", options1)
     const options2 = annotation1.options as any;
+    console.log("🚀 ~ options2:", options2)
 
     /**
      * Set Primitive Shape Options to Project Tags
@@ -74,7 +76,7 @@ export function GetAnnotationIntersection(
     primitiveOptions.annotationID = `${options1.annotationID}x${options2.annotationID}`;
 
     let annotationType = 'polygon';
-    if (options1.boundType === 'rectangle' && options2.boundType === 'rectangle') {
+    if (options1.annotationType === 'rectangle' && options2.annotationType === 'rectangle') {
       annotationType = 'rectangle'
     }
     primitiveOptions.annotationType = annotationType ?? "";

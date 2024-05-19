@@ -42,9 +42,9 @@ const TagStates = {
 };
 
 /* Tag Generator */
-function TagGenerator(idx, tagid) {
+function TagGenerator(idx, tagid, tagcolor) {
   const tagStyle = {
-    backgroundColor: TagColours[tagid % TagColours.length],
+    backgroundColor: tagcolor ?? TagColours[tagid % TagColours.length],
     fontSize: "12px",
     display: "inline-block",
     borderRadius: "3px",
@@ -343,8 +343,7 @@ export default class AnnotationMenu extends Component {
                   marginBottom: "2px",
                 }}
               />
-              {`${this.tagNames[annotation.options.annotationTag]
-                } ${displayCounter}`}
+              {`${this.tagNames[annotation.options.annotationTag]} ${displayCounter}`}
             </Tag>
           ))}
       </div>

@@ -24,6 +24,7 @@ import makeEta from "simple-eta";
 import {
   RenderAssetAnnotations,
   GetAnnotationIntersection,
+  AttachAnnotationHandlers,
 } from "@portal/components/annotations/utils/annotation";
 
 import {
@@ -419,7 +420,6 @@ export default class Annotator extends Component<
 
   // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
   componentDidUpdate() {
-    console.log('componentDidUpdate annotation options menu selection', this.state.annotationOptionsMenuSelection);
     /* Obtain Tag Map for loaded Model */
     /* The conditional checks are necessary due to the use of setStates */
     if (
@@ -696,9 +696,19 @@ export default class Annotator extends Component<
     );
 
     if (intersection) {
-      const options = intersection.options as any;
+      const intersectionWithListeners = AttachAnnotationHandlers(
+        this.map, 
+        this.annotationGroup, 
+        intersection,
+        this.project, 
+        (intersection.options as any).annotationID, 
+        {
+          handleAnnotationRightClick: this.handleAnnotationRightClick,
+          handleAnnotationLeftClick: this.handleAnnotationLeftClick,
+        });
+      const options = intersectionWithListeners.options as any;
       // Add intersection to map's annotation group
-      this.annotationGroup.addLayer(intersection);
+      this.annotationGroup.addLayer(intersectionWithListeners);
       // Remove the original annotations from the map's annotation group
       this.annotationGroup.removeLayer(annotation1);
       this.annotationGroup.removeLayer(annotation2);
@@ -1120,7 +1130,6 @@ export default class Annotator extends Component<
 
   /* Handle right click events on annotations */
   private handleAnnotationRightClick = (event: L.LeafletMouseEvent, annotation: L.Layer) => {
-    console.log("right click", event.type);
     event.originalEvent.preventDefault();
     event.originalEvent.stopPropagation();
     const point = this.map.latLngToContainerPoint(event.latlng);
@@ -1140,7 +1149,6 @@ export default class Annotator extends Component<
 
   /* Handle left click events on annotations */
   private handleAnnotationLeftClick = (event: L.LeafletMouseEvent, annotation: L.Layer) => {
-    console.log("left click", event.type);
     if (this.state.annotationOptionsMenuOpen) {
       return;
     };
@@ -1325,6 +1333,7 @@ export default class Annotator extends Component<
     const InvertedTags = invert(this.state.tagInfo.tags);
 
     /* Had to inject custom CSS */
+    // ${InvertedTags[layer.options.annotationTag]}
     this.annotationGroup.eachLayer((layer: L.Layer | any) => {
       layer.unbindTooltip();
       /* Render base tooltip first to check offset */
@@ -1576,7 +1585,7 @@ export default class Annotator extends Component<
     }, () => {
       // Update the annotationGroup's tags with the new state after state update is complete
       (this.annotationGroup as any).tags = this.state.tagInfo.tags;
-    });
+    })
   }
 
   /**
