@@ -1,0 +1,54 @@
+.menu {
+    position: absolute;
+    background: #f0f0f0;
+    /* Light grey background similar to Safari context menu */
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15);
+    /* Subtle shadow */
+    z-index: 1000;
+    padding: 0;
+    /* No padding, let the menu items handle the padding */
+    border-radius: 3px;
+    /* Slightly rounded corners */
+    overflow: hidden;
+    /* Ensure the border radius applies to the entire menu */
+}
+
+.menuItem {
+    padding: 8px 8px;
+    /* Padding for menu items */
+    cursor: pointer;
+    /* Pointer cursor */
+    font-size: 14px;
+    /* Font size */
+    color: #333;
+    /* Dark text color */
+}
+
+.menuItem:hover {
+    background: #e0e0e0;
+    /* Hover background color */
+}
+
+.menuDivider {
+    border-top: 1px solid #dcdcdc;
+    /* Divider color */
+    margin: 0;
+    /* No margin */
+}
+
+.closeButton {
+    position: absolute;
+    top: 4px;
+    /* Adjust top positioning */
+    right: 4px;
+    /* Adjust right positioning */
+    cursor: pointer;
+    color: #f0f0f0;
+    /* Dark text color */
+    font-size: 14px;
+    /* Smaller font size for icon */
+    padding: 2px;
+    /* Add some padding for better click area */
+    border-radius: 3px;
+    /* Slightly rounded corners */
+}

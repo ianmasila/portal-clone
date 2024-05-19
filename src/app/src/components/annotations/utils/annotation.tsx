@@ -7,22 +7,15 @@
  * annotation format to leaflet-polyline objects. And vice-versa.
  */
 import * as L from "leaflet";
+import * as turf from '@turf/turf';
 
 import {
   PrimitiveShapeOptions,
   TagColours,
 } from "@portal/constants/annotation";
 import { AssetAPIObject } from "@portal/api/annotation";
-
-/* Leaflet Annotation Type */
-export type PolylineObjectType = L.Polyline | L.Rectangle | L.Polygon;
-
-/* Annotation Interface */
-export interface AnnotationTagType {
-  tagname: string;
-  tagid: number;
-  rank?: number;
-}
+import { PolylineObjectType } from "@portal/components/annotations/types";
+import { blendHexColors } from "@portal/utils/index";
 
 /**
  * Get Direct Annotation Color by TagID
@@ -42,6 +35,62 @@ export const GetAnnotationColour = (
 };
 
 /**
+ * Get intersection of two annotations with area
+ * @param annotation1 - The first annotation to intersect
+ * @param annotation2 - The second annotation to intersect
+ * @returns The intersected annotation as a polygon or null if no intersection
+ */
+export function GetAnnotationIntersection(
+  annotation1: PolylineObjectType,
+  annotation2: PolylineObjectType
+): PolylineObjectType | null {
+  console.log("🚀 ~ GetAnnotationIntersection...")
+  const poly1 = annotation1 as L.Polygon;
+  const poly2 = annotation2 as L.Polygon;
+  const poly1GeoJSON = poly1.toGeoJSON();
+  const poly2GeoJSON = poly2.toGeoJSON();
+
+  const intersection = turf.intersect(poly1GeoJSON, poly2GeoJSON);
+
+  if (intersection && intersection.geometry.type === 'Polygon') {
+    const primitiveOptions = PrimitiveShapeOptions;
+    const options1 = annotation1.options as any;
+    console.log("🚀 ~ options1:", options1)
+    const options2 = annotation1.options as any;
+    console.log("🚀 ~ options2:", options2)
+
+    /**
+     * Set Primitive Shape Options to Project Tags
+     */
+    const color1 = annotation1.options.color;
+    const color2 = annotation2.options.color;
+    const blendedColor = blendHexColors(color1, color2);
+    if (blendedColor) {
+      primitiveOptions.color = blendedColor;
+      primitiveOptions.fillColor = blendedColor;
+    }
+
+    /* Create a new annotation tag */
+    const randomInteger = TagColours.length + Math.random()*100;
+    primitiveOptions.annotationTag = randomInteger;
+    primitiveOptions.annotationID = `${options1.annotationID}x${options2.annotationID}`;
+
+    let annotationType = 'polygon';
+    if (options1.annotationType === 'rectangle' && options2.annotationType === 'rectangle') {
+      annotationType = 'rectangle'
+    }
+    primitiveOptions.annotationType = annotationType ?? "";
+    primitiveOptions.annotationProjectID = options1.annotationProjectID ?? "";
+    primitiveOptions.confidence = Math.min(options1.confidence ?? 0, options2.confidence ?? 0);
+
+    const coordinates = intersection.geometry.coordinates[0].map(([lng, lat]) => L.latLng(lat, lng));
+    return new L.Polygon(coordinates, primitiveOptions);
+  }
+
+  return null;
+}
+
+/**
  * This function attaches a several crucial listeners to act on individual
  * annotation layers.
  */
@@ -50,16 +99,33 @@ export const AttachAnnotationHandlers = (
   annotationGroup: L.FeatureGroup,
   layer: L.Layer | any,
   project: string,
-  annotationID: string | undefined
+  annotationID: string | undefined,
+  callbacks?: {
+    handleAnnotationRightClick?: (event: L.LeafletMouseEvent, annotation: L.Layer) => void;
+    handleAnnotationLeftClick?: (event: L.LeafletMouseEvent, annotation: L.Layer) => void;
+  } 
 ): PolylineObjectType => {
+  // Add right-click event listener to the layer
+  layer.on("contextmenu", (event: L.LeafletMouseEvent) => {
+    callbacks?.handleAnnotationRightClick?.(event, layer);
+  });
+  // Add left-click event listener to the layer
+  layer.on("click", (event: L.LeafletMouseEvent) => {
+    // TODO: Ensure click event is ignored if parent event was right click
+    if (event.type !== "contextmenu") {
+      callbacks?.handleAnnotationLeftClick?.(event, layer);
+    }
+  });
+
   /**
    * Obtain Annotation ID from Layer Attribution of AnnotationID is Undefined
    */
-
   // eslint-disable-next-line no-param-reassign
   (layer.options as any).annotationID = annotationID;
+
   return layer;
 };
+
 
 /**
  * This function generates leaflet vector objects such as polygon and rectangle
@@ -75,7 +141,11 @@ export function RenderAssetAnnotations(
   project: string,
   assetWidth: number,
   assetHeight: number,
-  tags: { [tag: string]: number }
+  tags: { [tag: string]: number },
+  callbacks?: {
+    handleAnnotationRightClick?: (event: L.LeafletMouseEvent, annotation: L.Layer) => void;
+    handleAnnotationLeftClick?: (event: L.LeafletMouseEvent, annotation: L.Layer) => void;
+  } 
 ): Array<PolylineObjectType> {
   const polylineObjects: Array<PolylineObjectType> = [];
 
@@ -159,7 +229,8 @@ export function RenderAssetAnnotations(
         annotationGroup,
         PrimitiveObject(imageCoordinateBounds, primitiveOptions),
         project,
-        annotation.annotationID
+        annotation.annotationID,
+        callbacks,
       )
     );
   });

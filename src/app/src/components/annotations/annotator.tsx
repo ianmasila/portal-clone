@@ -16,14 +16,21 @@ import {
   IToastProps,
   Icon,
   Intent,
+  Alert,
 } from "@blueprintjs/core";
 
 import makeEta from "simple-eta";
 
 import {
-  PolylineObjectType,
   RenderAssetAnnotations,
+  GetAnnotationIntersection,
+  AttachAnnotationHandlers,
 } from "@portal/components/annotations/utils/annotation";
+
+import {
+  AnnotationLayer,
+  PolylineObjectType,
+} from "@portal/components/annotations/types";
 
 import {
   AssetAPIObject,
@@ -49,6 +56,10 @@ import FileModal from "./filemodal";
 import AnnotatorSettings from "./utils/annotatorsettings";
 import FormatTimerSeconds from "./utils/timer";
 import { RegisteredModel } from "./model";
+
+import AnnotationOptionsMenu from "./annotationoptionsmenu";
+import { AlertContent } from "@portal/constants/annotation";
+import { throws } from "assert";
 
 type Point = [number, number];
 type MapType = L.DrawMap;
@@ -147,16 +158,26 @@ interface AnnotatorState {
     isOutlined: true;
     opacity: number;
   };
+  /* Annotation Options Menu Mode */
+  annotationOptionsMenuOpen: boolean;
+  /* Cursor click position prompting annotation options menu */
+  annotationOptionsMenuPosition: {
+    x: number;
+    y: number;
+  } | null;
+  annotationOptionsMenuSelection: {
+    intersect: boolean;
+    selectedAnnotation: AnnotationLayer | null;
+    otherAnnotation: AnnotationLayer | null;
+  };
+  /* Alert Mode */
+  alert: {
+    isOpen: boolean;
+    intent: Intent;
+    icon: any;
+    content: string;
+  },
   currAnnotationPlaybackId: number;
-}
-
-/**
- * Annotations are Leaflet layers with additional
- * editing and options properties
- */
-interface AnnotationLayer extends L.Layer {
-  editing: any;
-  options: any;
 }
 
 /**
@@ -204,6 +225,9 @@ export default class Annotator extends Component<
 
   /* Reference to background Image or Video */
   backgroundImg: HTMLElement | null;
+  
+  /* Annotation options menu */
+  private annotationCallbacks: { handleAnnotationRightClick: any; handleAnnotationLeftClick: any};
 
   constructor(props: AnnotatorProps) {
     super(props);
@@ -234,6 +258,13 @@ export default class Annotator extends Component<
         isOutlined: true,
         opacity: 0.45,
       },
+      annotationOptionsMenuOpen: false,
+      annotationOptionsMenuPosition: null,
+      annotationOptionsMenuSelection: {
+        intersect: false,
+        selectedAnnotation: null,
+        otherAnnotation: null,
+      },
       filterArr: [],
       alwaysShowLabel: false,
       showSelected: true,
@@ -244,6 +275,12 @@ export default class Annotator extends Component<
         video: {
           frameInterval: 1,
         },
+      },
+      alert: {
+        isOpen: false,
+        intent: Intent.NONE,
+        icon: null,
+        content: "",
       },
       currAnnotationPlaybackId: 0,
     };
@@ -268,9 +305,15 @@ export default class Annotator extends Component<
     this.imagebarRef = React.createRef();
     this.backgroundImg = null;
 
+    this.annotationCallbacks = {
+      handleAnnotationRightClick: this.handleAnnotationRightClick,
+      handleAnnotationLeftClick: this.handleAnnotationLeftClick,
+    };
+
     this.selectAsset = this.selectAsset.bind(this);
     this.showToaster = this.showToaster.bind(this);
     this.renderProgress = this.renderProgress.bind(this);
+    this.renderAlert = this.renderAlert.bind(this);
     this.singleAnalysis = this.singleAnalysis.bind(this);
     this.getInference = this.getInference.bind(this);
     this.bulkAnalysis = this.bulkAnalysis.bind(this);
@@ -289,6 +332,30 @@ export default class Annotator extends Component<
     this.handleAdvancedSettingsClose = this.handleAdvancedSettingsClose.bind(
       this
     );
+    this.handleAnnotationOptionsMenuOpen = this.handleAnnotationOptionsMenuOpen.bind(
+      this
+    );
+    this.handleAnnotationOptionsMenuClose = this.handleAnnotationOptionsMenuClose.bind(
+      this
+    );
+    this.handleAnnotationOptionsMenuSelection = this.handleAnnotationOptionsMenuSelection.bind(
+      this
+    );
+    this.handleAlertClose = this.handleAlertClose.bind(
+      this
+    );
+    this.handleAlertOpen = this.handleAlertOpen.bind(
+      this
+    );
+    this.handleAnnotationOptionsMenuReset = this.handleAnnotationOptionsMenuReset.bind(
+      this
+    );
+    this.handleAnnotationRightClick = this.handleAnnotationRightClick.bind(
+      this
+    );
+    this.handleAnnotationLeftClick = this.handleAnnotationLeftClick.bind(
+      this
+    );
     this.handlePlayPauseVideoOverlay = this.handlePlayPauseVideoOverlay.bind(
       this
     );
@@ -304,6 +371,9 @@ export default class Annotator extends Component<
     this.setAnnotationOptions = this.setAnnotationOptions.bind(this);
     this.toggleShowSelected = this.toggleShowSelected.bind(this);
     this.setAnnotatedAssetsHidden = this.setAnnotatedAssetsHidden.bind(this);
+    this.intersectAnnotations = this.intersectAnnotations.bind(
+      this
+    );
   }
 
   async componentDidMount(): Promise<void> {
@@ -403,6 +473,20 @@ export default class Annotator extends Component<
       });
       (this.annotationGroup as any).tags = this.state.tagInfo.tags;
     }
+
+    /* Results of annotation menu option, e.g. show intersection polygon */
+    const annotationOptionsSelectedAnnotation = this.state.annotationOptionsMenuSelection.selectedAnnotation;
+    const annotationOptionsOtherAnnotation = this.state.annotationOptionsMenuSelection.otherAnnotation;
+    const annotationOptionsIsIntersect = this.state.annotationOptionsMenuSelection.intersect;
+
+    if (annotationOptionsSelectedAnnotation && annotationOptionsOtherAnnotation) {
+      if (annotationOptionsIsIntersect) {
+        this.intersectAnnotations(annotationOptionsSelectedAnnotation, annotationOptionsOtherAnnotation);
+      }
+    
+      // Reset annotation options menu selection
+      this.handleAnnotationOptionsMenuReset();
+    }
   }
 
   componentWillUnmount(): void {
@@ -433,6 +517,45 @@ export default class Annotator extends Component<
   }
   private handleAdvancedSettingsOpen() {
     this.setState({ advancedSettingsOpen: true });
+  }
+
+  private handleAnnotationOptionsMenuClose() {
+    this.setState({ annotationOptionsMenuOpen: false });
+  }
+  private handleAnnotationOptionsMenuOpen() {
+    this.setState({ annotationOptionsMenuOpen: true });
+  }
+  private handleAnnotationOptionsMenuReset() {
+    this.setState({ 
+      annotationOptionsMenuOpen: false,
+      annotationOptionsMenuPosition: null,
+      annotationOptionsMenuSelection: {
+        intersect: false,
+        selectedAnnotation: null,
+        otherAnnotation: null,
+      }
+    });
+  }
+
+  private handleAlertClose() {
+    this.setState({ 
+      alert: {
+        isOpen: false,
+        intent: Intent.NONE,
+        icon: null,
+        content: "",
+      } 
+    });
+  }
+  private handleAlertOpen(content: string, icon?: any, intent: Intent = Intent.PRIMARY) {
+    this.setState({ 
+      alert: {
+        isOpen: true,
+        intent,
+        icon,
+        content,
+      } 
+    });
   }
 
   private handleFileManagementClose() {
@@ -567,6 +690,45 @@ export default class Annotator extends Component<
         ),
       });
     }
+  }
+
+  /**
+   * Intersect 2 annotations in annotationGroup
+   * @param annotation1 - The first annotation to intersect
+   * @param annotation2 - The second annotation to intersect
+   * @returns {AnnotationLayer} The intersected annotation as a polygon or null if no intersection
+   * 
+   */
+  public intersectAnnotations(annotation1: AnnotationLayer, annotation2: AnnotationLayer): AnnotationLayer {
+    const intersection = GetAnnotationIntersection(
+      annotation1 as L.Layer as PolylineObjectType, 
+      annotation2 as L.Layer as PolylineObjectType
+    );
+
+    if (intersection) {
+      const intersectionWithListeners = AttachAnnotationHandlers(
+        this.map, 
+        this.annotationGroup, 
+        intersection,
+        this.project, 
+        (intersection.options as any).annotationID, 
+        this.annotationCallbacks,
+      );
+      const options = intersectionWithListeners.options as any;
+      // Add intersection to map's annotation group
+      this.annotationGroup.addLayer(intersectionWithListeners);
+      // Remove the original annotations from the map's annotation group
+      this.annotationGroup.removeLayer(annotation1);
+      this.annotationGroup.removeLayer(annotation2);
+
+      this.addNewTag(options.annotationID, options.annotationTag);
+      this.updateMenuBarAnnotations();
+    } else {
+      this.toaster.show(this.renderAlert(AlertContent.INTERSECT.EMPTY_RESULT, 2000));
+    }
+
+    const result = intersection as L.Layer as AnnotationLayer;
+    return result;
   }
 
   /**
@@ -868,7 +1030,8 @@ export default class Annotator extends Component<
       this.currentAsset.metadata.width,
       this.currentAsset.metadata.height,
       // eslint-disable-next-line react/no-access-state-in-setstate
-      this.state.tagInfo.tags
+      this.state.tagInfo.tags,
+      this.annotationCallbacks,
     );
 
     this.annotationGroup.clearLayers();
@@ -967,6 +1130,57 @@ export default class Annotator extends Component<
         settings.iou = value;
       }
       return { inferenceOptions: settings };
+    });
+  };
+
+  /* Handle right click events on annotations */
+  private handleAnnotationRightClick = (event: L.LeafletMouseEvent, annotation: L.Layer) => {
+    event.originalEvent.preventDefault();
+    event.originalEvent.stopPropagation();
+    const point = this.map.latLngToContainerPoint(event.latlng);
+    const x = point.x;
+    const y = point.y;
+    this.setState(prevState => {
+      return {
+        annotationOptionsMenuOpen: true,
+        annotationOptionsMenuPosition: { x, y },
+        annotationOptionsMenuSelection: {
+          ...prevState.annotationOptionsMenuSelection,
+          selectedAnnotation: annotation as AnnotationLayer,
+        }
+      }
+    })
+  };
+
+  /* Handle left click events on annotations */
+  private handleAnnotationLeftClick = (event: L.LeafletMouseEvent, annotation: L.Layer) => {
+    if (this.state.annotationOptionsMenuOpen) {
+      return;
+    };
+    /* If annotation menu option was selected, update selection data */
+    const annotationOptionsSelectedAnnotation = this.state.annotationOptionsMenuSelection.selectedAnnotation;
+    if (annotationOptionsSelectedAnnotation) {
+      this.setState(prevState => {
+        return { 
+          annotationOptionsMenuSelection: {
+            ...prevState.annotationOptionsMenuSelection,
+            otherAnnotation: annotation as AnnotationLayer, 
+          }
+        }
+      })
+    }
+  };
+
+  /* For now, we only support `intersect` */
+  private handleAnnotationOptionsMenuSelection = (value: any, key: string) => {
+    this.setState(prevState => {
+      const selection = prevState.annotationOptionsMenuSelection;
+      if (key === "intersect") {
+        selection.intersect = value.intersect;
+        this.toaster.show(this.renderAlert(AlertContent.INTERSECT.PROMPT, 2000));
+      }
+     
+      return { annotationOptionsMenuSelection: selection };
     });
   };
 
@@ -1124,6 +1338,7 @@ export default class Annotator extends Component<
     const InvertedTags = invert(this.state.tagInfo.tags);
 
     /* Had to inject custom CSS */
+    // ${InvertedTags[layer.options.annotationTag]}
     this.annotationGroup.eachLayer((layer: L.Layer | any) => {
       layer.unbindTooltip();
       /* Render base tooltip first to check offset */
@@ -1359,6 +1574,7 @@ export default class Annotator extends Component<
     this.selectAsset(this.currentAsset);
   }
 
+  // DO THIS TOO
   /**
    * Add New Created Tag
    * - Callback for the Annotation level
@@ -1371,7 +1587,10 @@ export default class Annotator extends Component<
       return {
         tagInfo: { modelHash: prevState.tagInfo.modelHash, tags: updatedTags },
       };
-    });
+    }, () => {
+      // Update the annotationGroup's tags with the new state after state update is complete
+      (this.annotationGroup as any).tags = this.state.tagInfo.tags;
+    })
   }
 
   /**
@@ -1425,6 +1644,19 @@ export default class Annotator extends Component<
     };
 
     if (message !== "") toastProps.action = { text: message };
+
+    return toastProps;
+  }
+
+  private renderAlert(message: string, timeout?: number, onDismiss?: (didTimeoutExpire: boolean) => void): IToastProps {
+    const toastProps: IToastProps = {
+      className: `bp3-text-muted ${this.props.useDarkTheme ? "bp3-dark" : ""}`,
+      message: <p>{message}</p>,
+      onDismiss: onDismiss,
+      timeout: timeout ??  5000,
+    };
+
+    // if (message !== "") toastProps.action = { text: message };
 
     return toastProps;
   }
@@ -1682,6 +1914,21 @@ export default class Annotator extends Component<
                 allowUserClose={true}
                 callbacks={{
                   HandleChangeInSettings: this.handleChangeInAdvancedSettings,
+                }}
+                {...this.props}
+              />
+            ) : null}
+            {/* Annotation Options Menu */}
+            {this.state.annotationOptionsMenuOpen ? (
+              <AnnotationOptionsMenu
+                position={this.state.annotationOptionsMenuPosition}
+                onClose={
+                  !this.state.annotationOptionsMenuOpen
+                    ? this.handleAnnotationOptionsMenuOpen
+                    : this.handleAnnotationOptionsMenuClose
+                }
+                callbacks={{
+                  handleAnnotationOptionsMenuSelection: this.handleAnnotationOptionsMenuSelection,
                 }}
                 {...this.props}
               />

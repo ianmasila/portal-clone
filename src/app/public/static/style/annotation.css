@@ -185,13 +185,13 @@
   outline: 5px solid #106ba3;
 }
 
-.react-thumbnail-generator > img {
+.react-thumbnail-generator>img {
   width: 150px;
   height: 100px;
   object-fit: cover;
 }
 
-.bp3-dark > .image-bar-thumbnail-highlighted {
+.bp3-dark>.image-bar-thumbnail-highlighted {
   outline: 5px solid #2b95d6;
 }
 
@@ -199,7 +199,7 @@
   outline: 5px solid #106ba3;
 }
 
-.bp3-dark > .image-bar-thumbnail:hover {
+.bp3-dark>.image-bar-thumbnail:hover {
   outline: 5px solid #2b95d6;
 }
 
@@ -214,7 +214,7 @@
   border-radius: 0px !important;
 }
 
-.image-bar-thumbnail > img {
+.image-bar-thumbnail>img {
   width: 100%;
   height: 100%;
   object-fit: cover;
@@ -233,7 +233,7 @@
   border-radius: 8px !important;
 }
 
-.leaflet-tooltip > .bp3-tag {
+.leaflet-tooltip>.bp3-tag {
   font-size: 10px !important;
   line-height: 12px !important;
 }
@@ -398,4 +398,14 @@
 
 :focus:not(button, input) {
   outline: none !important;
+}
+
+.annotation-options-menu {
+  position: absolute;
+  background: black;
+  border: 1px solid darkgray;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15);
+  z-index: 1000;
+  padding: 5px;
+  border-radius: 3px;
 }

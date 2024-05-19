@@ -42,9 +42,9 @@ const TagStates = {
 };
 
 /* Tag Generator */
-function TagGenerator(idx, tagid) {
+function TagGenerator(idx, tagid, tagcolor) {
   const tagStyle = {
-    backgroundColor: TagColours[tagid % TagColours.length],
+    backgroundColor: tagcolor ?? TagColours[tagid % TagColours.length],
     fontSize: "12px",
     display: "inline-block",
     borderRadius: "3px",
@@ -125,7 +125,7 @@ export default class AnnotationMenu extends Component {
       if (
         idx === 0 ||
         annotation.options.annotationTag !==
-          annotationArray[idx - 1].options.annotationTag
+        annotationArray[idx - 1].options.annotationTag
       ) {
         /* If new tag, reset counter */
         arr.push([annotation, 1]);
@@ -277,6 +277,16 @@ export default class AnnotationMenu extends Component {
       </div>
     );
 
+
+    /* Refactor using componentDidMount so that names are more descriptive */
+    // Handle tag names containing 'x'
+    // Object.entries(this.tagNames).forEach(([id, name]) => {
+    //   if (name.includes('x')) {
+    //     const ids = name.split('x').map(Number);
+    //     this.tagNames[id] = `${this.tagNames[ids[0]]}x${this.tagNames[ids[1]]}`;
+    //   }
+    // });
+
     /**
      * List of annotations to be displayed under Annotations tab
      */
@@ -291,11 +301,11 @@ export default class AnnotationMenu extends Component {
               (this.props.filterArr.length === 0 ||
                 /* Check if tag is present in filter (CASE-INSENSITIVE) */
                 this.props.showSelected ===
-                  this.props.filterArr.some(filter =>
-                    this.tagNames[annotation.options.annotationTag]
-                      .toLowerCase()
-                      .includes(filter.toLowerCase())
-                  ))
+                this.props.filterArr.some(filter =>
+                  this.tagNames[annotation.options.annotationTag]
+                    .toLowerCase()
+                    .includes(filter.toLowerCase())
+                ))
           )
           .map(([annotation, displayCounter]) => (
             <Tag
@@ -337,15 +347,13 @@ export default class AnnotationMenu extends Component {
                 style={{
                   color:
                     TagColours[
-                      annotation.options.annotationTag % TagColours.length
+                    annotation.options.annotationTag % TagColours.length
                     ],
                   marginRight: "5px",
                   marginBottom: "2px",
                 }}
               />
-              {`${
-                this.tagNames[annotation.options.annotationTag]
-              } ${displayCounter}`}
+              {`${this.tagNames[annotation.options.annotationTag]} ${displayCounter}`}
             </Tag>
           ))}
       </div>

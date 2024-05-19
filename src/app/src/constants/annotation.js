@@ -244,3 +244,10 @@ export const TagColours = [
   "#42A5F5",
   "#AEEA00",
 ];
+
+export const AlertContent = {
+  INTERSECT: {
+    PROMPT: "Select another annotation for Annotation Intersection",
+    EMPTY_RESULT: "No intersection found",
+  },
+};
