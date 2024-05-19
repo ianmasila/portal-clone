@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Menu, MenuItem } from '@blueprintjs/core';
+import React, { useEffect, useRef } from 'react';
+import { Icon, Menu, MenuItem } from '@blueprintjs/core';
 import styles from './annotationoptionsmenu.module.css';
 
 interface AnnotationOptionsMenuProps {
@@ -14,8 +14,23 @@ interface AnnotationOptionsMenuProps {
 }
 
 const AnnotationOptionsMenu: React.FC<AnnotationOptionsMenuProps> = ({ position, onClose, callbacks }) => {
-  const [isIntersect, setIsIntersect] = useState<boolean>(false);
-  console.log("🚀 ~ isIntersect:", isIntersect)
+  // TODO: Remove close button and close when user clicks outside menu
+  // const menuRef = useRef<HTMLDivElement | null>(null);
+
+  // useEffect(() => {
+  //   const handleClickOutside = (event: MouseEvent) => {
+  //     console.log('handle...');
+  //     if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+  //       console.log("clicked outside.")
+  //       onClose();
+  //     }
+  //   };
+
+  //   document.addEventListener('mousedown', handleClickOutside);
+  //   return () => {
+  //     document.removeEventListener('mousedown', handleClickOutside);
+  //   };
+  // }, [onClose]);
 
   if (!position) {
     return null;
@@ -25,24 +40,40 @@ const AnnotationOptionsMenu: React.FC<AnnotationOptionsMenuProps> = ({ position,
       <div className={styles.menu} style={{ top: `${position.y - 21}px`, left: `${position.x + 24}px` }}>
         <Menu>
           <MenuItem
+            className={styles.menuItem}
             icon="intersection"
             text="Intersect"
             onClick={() => {
               callbacks.handleAnnotationOptionsMenuSelection({
                 intersect: true,
               }, 'intersect');
-              setIsIntersect(true);
               onClose();
-              // alert("Select another annotation for Annotation Intersection");
             }}
           />
-          <div className={styles.closeButton} >
-            <MenuItem
-              icon="cross"
-              onClick={onClose}
-            />
-          </div>
+          <MenuItem
+            className={styles.menuItem}
+            icon="add"
+            text="Merge"
+            onClick={() => {
+              callbacks.handleAnnotationOptionsMenuSelection({ merge: true }, 'merge');
+              onClose();
+            }}
+            disabled
+          />
+          <MenuItem
+            className={styles.menuItem}
+            icon="minus"
+            text="Subtract"
+            onClick={() => {
+              callbacks.handleAnnotationOptionsMenuSelection({ subtract: true }, 'subtract');
+              onClose();
+            }}
+            disabled
+          />
         </Menu>
+        <div className={styles.closeButton} onClick={onClose}>
+          <Icon icon="cross" iconSize={14} />
+        </div>
       </div>
   );
 };
