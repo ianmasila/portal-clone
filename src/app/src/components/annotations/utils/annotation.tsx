@@ -14,16 +14,8 @@ import {
   TagColours,
 } from "@portal/constants/annotation";
 import { AssetAPIObject } from "@portal/api/annotation";
-
-/* Leaflet Annotation Type */
-export type PolylineObjectType = L.Polyline | L.Rectangle | L.Polygon;
-
-/* Annotation Interface */
-export interface AnnotationTagType {
-  tagname: string;
-  tagid: number;
-  rank?: number;
-}
+import { PolylineObjectType } from "@portal/components/annotations/types";
+import { blendHexColors } from "@portal/utils/index";
 
 /**
  * Get Direct Annotation Color by TagID
@@ -55,15 +47,41 @@ export function GetAnnotationIntersection(
   console.log("🚀 ~ GetAnnotationIntersection...")
   const poly1 = annotation1 as L.Polygon;
   const poly2 = annotation2 as L.Polygon;
-
   const poly1GeoJSON = poly1.toGeoJSON();
   const poly2GeoJSON = poly2.toGeoJSON();
 
   const intersection = turf.intersect(poly1GeoJSON, poly2GeoJSON);
 
   if (intersection && intersection.geometry.type === 'Polygon') {
+    const primitiveOptions = PrimitiveShapeOptions;
+    const options1 = annotation1.options as any;
+    const options2 = annotation1.options as any;
+
+    /**
+     * Set Primitive Shape Options to Project Tags
+     */
+    const color1 = annotation1.options.color;
+    const color2 = annotation2.options.color;
+    const blendedColor = blendHexColors(color1, color2);
+    if (blendedColor) {
+      primitiveOptions.color = blendedColor;
+      primitiveOptions.fillColor = blendedColor;
+    }
+
+    /* @TODO: Create a new annotation tag */
+    // primitiveOptions.annotationTag = annotation.tag.id;
+    // primitiveOptions.annotationID = annotation.annotationID;
+
+    let annotationType = 'polygon';
+    if (options1.boundType === 'rectangle' && options2.boundType === 'rectangle') {
+      annotationType = 'rectangle'
+    }
+    primitiveOptions.annotationType = annotationType ?? "";
+    primitiveOptions.annotationProjectID = options1.annotationProjectID ?? "";
+    primitiveOptions.confidence = Math.min(options1.confidence ?? 0, options2.confidence ?? 0);
+
     const coordinates = intersection.geometry.coordinates[0].map(([lng, lat]) => L.latLng(lat, lng));
-    return new L.Polygon(coordinates, PrimitiveShapeOptions) as L.Polygon;
+    return new L.Polygon(coordinates, primitiveOptions);
   }
 
   return null;

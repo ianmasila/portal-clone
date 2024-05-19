@@ -22,10 +22,14 @@ import {
 import makeEta from "simple-eta";
 
 import {
-  PolylineObjectType,
   RenderAssetAnnotations,
   GetAnnotationIntersection,
 } from "@portal/components/annotations/utils/annotation";
+
+import {
+  AnnotationLayer,
+  PolylineObjectType,
+} from "@portal/components/annotations/types";
 
 import {
   AssetAPIObject,
@@ -687,17 +691,15 @@ export default class Annotator extends Component<
    */
   public intersectAnnotations(annotation1: AnnotationLayer, annotation2: AnnotationLayer): AnnotationLayer {
     const intersection = GetAnnotationIntersection(
-      annotation1 as L.Layer as PolylineObjectType,
-      annotation2 as L.Layer as PolylineObjectType,
+      annotation1 as L.Layer as PolylineObjectType, 
+      annotation2 as L.Layer as PolylineObjectType
     );
 
     if (intersection) {
-      // FIXME: Highlight the intersection area with red border on the polygon
-      // Pan canvas to intersection and draw highlight over intersection area on the canvas
-      this.map.addLayer(intersection);
-      // Remove the original annotations from the map
-      this.map.removeLayer(annotation1);
-      this.map.removeLayer(annotation1);
+      this.annotationGroup.addLayer(intersection);
+      // Remove the original annotations from the map's annotation group
+      this.annotationGroup.removeLayer(annotation1);
+      this.annotationGroup.removeLayer(annotation2);
     } else {
       this.handleAlertOpen(AlertContent.INTERSECT.EMPTY_RESULT);
     }
@@ -1509,6 +1511,7 @@ export default class Annotator extends Component<
     }
   }
 
+  /* @TODO: Call this when intersect happens */
   /**
    * Update annotations list in menu bar state
    * to current annotationGroup
