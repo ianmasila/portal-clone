@@ -52,6 +52,8 @@ import FormatTimerSeconds from "./utils/timer";
 import { RegisteredModel } from "./model";
 
 import AnnotationOptionsMenu from "./annotationoptionsmenu";
+import { AlertContent } from "@portal/constants/annotation";
+import InfoAlert from "./alert";
 
 type Point = [number, number];
 type MapType = L.DrawMap;
@@ -162,6 +164,12 @@ interface AnnotatorState {
     selectedAnnotation: AnnotationLayer | null;
     otherAnnotation: AnnotationLayer | null;
   };
+  /* Alert Mode */
+  alert: {
+    isOpen: boolean;
+    icon: any;
+    content: string;
+  },
   currAnnotationPlaybackId: number;
 }
 
@@ -274,6 +282,11 @@ export default class Annotator extends Component<
           frameInterval: 1,
         },
       },
+      alert: {
+        isOpen: false,
+        icon: null,
+        content: "",
+      },
       currAnnotationPlaybackId: 0,
     };
 
@@ -325,6 +338,12 @@ export default class Annotator extends Component<
       this
     );
     this.handleAnnotationOptionsMenuSelection = this.handleAnnotationOptionsMenuSelection.bind(
+      this
+    );
+    this.handleAlertClose = this.handleAlertClose.bind(
+      this
+    );
+    this.handleAlertOpen = this.handleAlertOpen.bind(
       this
     );
     this.handleAnnotationOptionsMenuReset = this.handleAnnotationOptionsMenuReset.bind(
@@ -469,6 +488,7 @@ export default class Annotator extends Component<
   
         if (intersection) {
           // FIXME: Highlight the intersection area with red border on the polygon
+          // Pan canvas to intersection and draw highlight over intersection area on the canvas
           intersection.setStyle({ color: "red" });
         } else {
           alert("No intersection found");
@@ -525,6 +545,25 @@ export default class Annotator extends Component<
         selectedAnnotation: null,
         otherAnnotation: null,
       }
+    });
+  }
+
+  private handleAlertClose() {
+    this.setState({ 
+      alert: {
+        isOpen: false,
+        icon: null,
+        content: "",
+      } 
+    });
+  }
+  private handleAlertOpen(content: string, icon?: any) {
+    this.setState({ 
+      alert: {
+        isOpen: true,
+        icon,
+        content,
+      } 
     });
   }
 
@@ -1113,6 +1152,7 @@ export default class Annotator extends Component<
       const selection = prevState.annotationOptionsMenuSelection;
       if (key === "intersect") {
         selection.intersect = value.intersect;
+        this.handleAlertOpen(AlertContent.INTERSECT.PROMPT);
       }
      
       return { annotationOptionsMenuSelection: selection };
@@ -1850,6 +1890,15 @@ export default class Annotator extends Component<
                 {...this.props}
               />
             ) : null}
+            <Alert
+              isOpen={this.state.alert.isOpen}
+              intent={Intent.WARNING}
+              icon={this.state.alert.icon}
+              onClose={this.handleAlertClose}
+              className={this.props.useDarkTheme ? "bp3-dark" : ""}
+            >
+              {this.state.alert.content}
+            </Alert>
           </div>
         </div>
       </div>
