@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React from 'react';
 import { Icon, Menu, MenuItem } from '@blueprintjs/core';
 import styles from './annotationoptionsmenu.module.css';
 
@@ -14,7 +14,7 @@ interface AnnotationOptionsMenuProps {
 }
 
 const AnnotationOptionsMenu: React.FC<AnnotationOptionsMenuProps> = ({ position, onClose, callbacks }) => {
-  // TODO: Remove close button and close when user clicks outside menu
+  // @TODO: Remove close button and close when user clicks outside menu
   // const menuRef = useRef<HTMLDivElement | null>(null);
 
   // useEffect(() => {

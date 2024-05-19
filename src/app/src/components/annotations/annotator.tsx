@@ -16,7 +16,6 @@ import {
   IToastProps,
   Icon,
   Intent,
-  Alert,
 } from "@blueprintjs/core";
 
 import makeEta from "simple-eta";
@@ -59,7 +58,6 @@ import { RegisteredModel } from "./model";
 
 import AnnotationOptionsMenu from "./annotationoptionsmenu";
 import { AlertContent } from "@portal/constants/annotation";
-import { throws } from "assert";
 
 type Point = [number, number];
 type MapType = L.DrawMap;
@@ -366,6 +364,9 @@ export default class Annotator extends Component<
       this
     );
     this.filterAnnotationVisibility = this.filterAnnotationVisibility.bind(
+      this
+    );
+    this.bindAnnotationTooltip = this.bindAnnotationTooltip.bind(
       this
     );
     this.setAnnotationOptions = this.setAnnotationOptions.bind(this);
@@ -700,11 +701,9 @@ export default class Annotator extends Component<
    * 
    */
   public intersectAnnotations(annotation1: AnnotationLayer, annotation2: AnnotationLayer): AnnotationLayer {
-    const intersection = GetAnnotationIntersection(
-      annotation1 as L.Layer as PolylineObjectType, 
-      annotation2 as L.Layer as PolylineObjectType
-    );
-
+    const poly1 = annotation1 as L.Layer as PolylineObjectType;
+    const poly2 = annotation2 as L.Layer as PolylineObjectType;
+    const intersection = GetAnnotationIntersection(poly1, poly2);
     if (intersection) {
       const intersectionWithListeners = AttachAnnotationHandlers(
         this.map, 
@@ -715,14 +714,23 @@ export default class Annotator extends Component<
         this.annotationCallbacks,
       );
       const options = intersectionWithListeners.options as any;
+      this.addNewTag(options.annotationID, options.annotationTag);
       // Add intersection to map's annotation group
       this.annotationGroup.addLayer(intersectionWithListeners);
       // Remove the original annotations from the map's annotation group
       this.annotationGroup.removeLayer(annotation1);
       this.annotationGroup.removeLayer(annotation2);
 
-      this.addNewTag(options.annotationID, options.annotationTag);
+      // Note: Update canvas' annotations. This is a workaround since `filterAnnotationVisibility` needs quite some refactoring
+      const newAssetAnnotations = (this.state.currentAssetAnnotations as PolylineObjectType[]).slice().filter(annotation => 
+        annotation !== poly1 && annotation !== poly2);
+      newAssetAnnotations.push(intersectionWithListeners);
+
+      this.setState({
+        currentAssetAnnotations: newAssetAnnotations,
+      });
       this.updateMenuBarAnnotations();
+      this.bindAnnotationTooltip(intersectionWithListeners, options.annotationID);
     } else {
       this.toaster.show(this.renderAlert(AlertContent.INTERSECT.EMPTY_RESULT, 2000));
     }
@@ -1335,28 +1343,30 @@ export default class Annotator extends Component<
         this.annotationGroup.addLayer(annotationToCommit);
       });
 
+    this.annotationGroup.eachLayer(layer => this.bindAnnotationTooltip(layer));
+  }
+
+  /** Bind tooltip to annotation */
+  private bindAnnotationTooltip = (layer?: L.Layer | any, label?: string) => {
     const InvertedTags = invert(this.state.tagInfo.tags);
 
     /* Had to inject custom CSS */
-    // ${InvertedTags[layer.options.annotationTag]}
-    this.annotationGroup.eachLayer((layer: L.Layer | any) => {
-      layer.unbindTooltip();
-      /* Render base tooltip first to check offset */
-      layer.bindTooltip(
-        `<span class='bp3-tag'
-        style='color: #FFFFFF;
-        border-radius: 6px !important;
-        background-color: ${layer.options.color};'>
-          ${InvertedTags[layer.options.annotationTag]}
-        </span>`,
-        {
-          interactive: !this.state.alwaysShowLabel,
-          permanent: this.state.alwaysShowLabel,
-          opacity: 0.9,
-          direction: "center",
-        }
-      );
-    });
+    layer.unbindTooltip();
+    /* Render base tooltip first to check offset */
+    layer.bindTooltip(
+      `<span class='bp3-tag'
+      style='color: #FFFFFF;
+      border-radius: 6px !important;
+      background-color: ${layer.options.color};'>
+        ${label ?? InvertedTags[layer.options.annotationTag] ?? ''}
+      </span>`,
+      {
+        interactive: !this.state.alwaysShowLabel,
+        permanent: this.state.alwaysShowLabel,
+        opacity: 0.9,
+        direction: "center",
+      }
+    );
   }
 
   /**
