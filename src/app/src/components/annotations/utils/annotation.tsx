@@ -68,9 +68,10 @@ export function GetAnnotationIntersection(
       primitiveOptions.fillColor = blendedColor;
     }
 
-    /* @TODO: Create a new annotation tag */
-    // primitiveOptions.annotationTag = annotation.tag.id;
-    // primitiveOptions.annotationID = annotation.annotationID;
+    /* Create a new annotation tag */
+    const randomInteger = TagColours.length + Math.random()*100;
+    primitiveOptions.annotationTag = randomInteger;
+    primitiveOptions.annotationID = `${options1.annotationID}x${options2.annotationID}`;
 
     let annotationType = 'polygon';
     if (options1.boundType === 'rectangle' && options2.boundType === 'rectangle') {

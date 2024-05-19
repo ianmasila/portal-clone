@@ -125,7 +125,7 @@ export default class AnnotationMenu extends Component {
       if (
         idx === 0 ||
         annotation.options.annotationTag !==
-          annotationArray[idx - 1].options.annotationTag
+        annotationArray[idx - 1].options.annotationTag
       ) {
         /* If new tag, reset counter */
         arr.push([annotation, 1]);
@@ -291,11 +291,11 @@ export default class AnnotationMenu extends Component {
               (this.props.filterArr.length === 0 ||
                 /* Check if tag is present in filter (CASE-INSENSITIVE) */
                 this.props.showSelected ===
-                  this.props.filterArr.some(filter =>
-                    this.tagNames[annotation.options.annotationTag]
-                      .toLowerCase()
-                      .includes(filter.toLowerCase())
-                  ))
+                this.props.filterArr.some(filter =>
+                  this.tagNames[annotation.options.annotationTag]
+                    .toLowerCase()
+                    .includes(filter.toLowerCase())
+                ))
           )
           .map(([annotation, displayCounter]) => (
             <Tag
@@ -337,15 +337,14 @@ export default class AnnotationMenu extends Component {
                 style={{
                   color:
                     TagColours[
-                      annotation.options.annotationTag % TagColours.length
+                    annotation.options.annotationTag % TagColours.length
                     ],
                   marginRight: "5px",
                   marginBottom: "2px",
                 }}
               />
-              {`${
-                this.tagNames[annotation.options.annotationTag]
-              } ${displayCounter}`}
+              {`${this.tagNames[annotation.options.annotationTag]
+                } ${displayCounter}`}
             </Tag>
           ))}
       </div>

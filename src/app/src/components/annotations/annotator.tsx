@@ -696,10 +696,15 @@ export default class Annotator extends Component<
     );
 
     if (intersection) {
+      const options = intersection.options as any;
+      // Add intersection to map's annotation group
       this.annotationGroup.addLayer(intersection);
       // Remove the original annotations from the map's annotation group
       this.annotationGroup.removeLayer(annotation1);
       this.annotationGroup.removeLayer(annotation2);
+
+      this.addNewTag(options.annotationID, options.annotationTag);
+      this.updateMenuBarAnnotations();
     } else {
       this.handleAlertOpen(AlertContent.INTERSECT.EMPTY_RESULT);
     }
@@ -1511,7 +1516,6 @@ export default class Annotator extends Component<
     }
   }
 
-  /* @TODO: Call this when intersect happens */
   /**
    * Update annotations list in menu bar state
    * to current annotationGroup
@@ -1556,6 +1560,7 @@ export default class Annotator extends Component<
     this.selectAsset(this.currentAsset);
   }
 
+  // DO THIS TOO
   /**
    * Add New Created Tag
    * - Callback for the Annotation level
@@ -1568,6 +1573,9 @@ export default class Annotator extends Component<
       return {
         tagInfo: { modelHash: prevState.tagInfo.modelHash, tags: updatedTags },
       };
+    }, () => {
+      // Update the annotationGroup's tags with the new state after state update is complete
+      (this.annotationGroup as any).tags = this.state.tagInfo.tags;
     });
   }
 
