@@ -59,6 +59,7 @@ import { RegisteredModel } from "./model";
 
 import AnnotationOptionsMenu from "./annotationoptionsmenu";
 import { AlertContent } from "@portal/constants/annotation";
+import { throws } from "assert";
 
 type Point = [number, number];
 type MapType = L.DrawMap;
@@ -312,6 +313,7 @@ export default class Annotator extends Component<
     this.selectAsset = this.selectAsset.bind(this);
     this.showToaster = this.showToaster.bind(this);
     this.renderProgress = this.renderProgress.bind(this);
+    this.renderAlert = this.renderAlert.bind(this);
     this.singleAnalysis = this.singleAnalysis.bind(this);
     this.getInference = this.getInference.bind(this);
     this.bulkAnalysis = this.bulkAnalysis.bind(this);
@@ -722,7 +724,7 @@ export default class Annotator extends Component<
       this.addNewTag(options.annotationID, options.annotationTag);
       this.updateMenuBarAnnotations();
     } else {
-      this.handleAlertOpen(AlertContent.INTERSECT.EMPTY_RESULT);
+      this.toaster.show(this.renderAlert(AlertContent.INTERSECT.EMPTY_RESULT, 2000));
     }
 
     const result = intersection as L.Layer as AnnotationLayer;
@@ -1175,7 +1177,7 @@ export default class Annotator extends Component<
       const selection = prevState.annotationOptionsMenuSelection;
       if (key === "intersect") {
         selection.intersect = value.intersect;
-        this.handleAlertOpen(AlertContent.INTERSECT.PROMPT);
+        this.toaster.show(this.renderAlert(AlertContent.INTERSECT.PROMPT, 2000));
       }
      
       return { annotationOptionsMenuSelection: selection };
@@ -1646,6 +1648,19 @@ export default class Annotator extends Component<
     return toastProps;
   }
 
+  private renderAlert(message: string, timeout?: number, onDismiss?: (didTimeoutExpire: boolean) => void): IToastProps {
+    const toastProps: IToastProps = {
+      className: `bp3-text-muted ${this.props.useDarkTheme ? "bp3-dark" : ""}`,
+      message: <p>{message}</p>,
+      onDismiss: onDismiss,
+      timeout: timeout ??  5000,
+    };
+
+    // if (message !== "") toastProps.action = { text: message };
+
+    return toastProps;
+  }
+
   /* Hotkey for Quick Annotation Selection */
   public renderHotkeys(): JSX.Element {
     return (
@@ -1918,17 +1933,6 @@ export default class Annotator extends Component<
                 {...this.props}
               />
             ) : null}
-            <Alert
-              className={this.props.useDarkTheme ? "bp3-dark" : ""}
-              isOpen={this.state.alert.isOpen}
-              intent={this.state.alert.intent}
-              icon={this.state.alert.icon}
-              onClose={this.handleAlertClose}
-              canOutsideClickCancel={true}
-              canEscapeKeyCancel={true}
-            >
-              {this.state.alert.content}
-            </Alert>
           </div>
         </div>
       </div>
