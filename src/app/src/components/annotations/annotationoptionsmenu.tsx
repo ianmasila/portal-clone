@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Alert, Intent, Menu, MenuItem } from '@blueprintjs/core';
+import { Menu, MenuItem } from '@blueprintjs/core';
 import styles from './annotationoptionsmenu.module.css';
 
 interface AnnotationOptionsMenuProps {
@@ -22,7 +22,6 @@ const AnnotationOptionsMenu: React.FC<AnnotationOptionsMenuProps> = ({ position,
   }
 
   return (
-    <>
       <div className={styles.menu} style={{ top: `${position.y - 21}px`, left: `${position.x + 24}px` }}>
         <Menu>
           <MenuItem
@@ -45,18 +44,6 @@ const AnnotationOptionsMenu: React.FC<AnnotationOptionsMenuProps> = ({ position,
           </div>
         </Menu>
       </div>
-      {/* <Alert
-        isOpen={isIntersect}
-        intent={Intent.PRIMARY}
-        onCancel={() => setIsIntersect(false)}
-        cancelButtonText={"Cancel"}
-        className={"bp3-dark"}
-      >
-        <div>
-          Select another annotation for Annotation Intersection
-        </div>
-      </Alert> */}
-    </>
   );
 };
 

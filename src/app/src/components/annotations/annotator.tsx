@@ -16,6 +16,7 @@ import {
   IToastProps,
   Icon,
   Intent,
+  Alert,
 } from "@blueprintjs/core";
 
 import makeEta from "simple-eta";
@@ -53,7 +54,6 @@ import { RegisteredModel } from "./model";
 
 import AnnotationOptionsMenu from "./annotationoptionsmenu";
 import { AlertContent } from "@portal/constants/annotation";
-import InfoAlert from "./alert";
 
 type Point = [number, number];
 type MapType = L.DrawMap;
@@ -167,6 +167,7 @@ interface AnnotatorState {
   /* Alert Mode */
   alert: {
     isOpen: boolean;
+    intent: Intent;
     icon: any;
     content: string;
   },
@@ -284,6 +285,7 @@ export default class Annotator extends Component<
       },
       alert: {
         isOpen: false,
+        intent: Intent.NONE,
         icon: null,
         content: "",
       },
@@ -552,15 +554,17 @@ export default class Annotator extends Component<
     this.setState({ 
       alert: {
         isOpen: false,
+        intent: Intent.NONE,
         icon: null,
         content: "",
       } 
     });
   }
-  private handleAlertOpen(content: string, icon?: any) {
+  private handleAlertOpen(content: string, icon?: any, intent: Intent = Intent.PRIMARY) {
     this.setState({ 
       alert: {
         isOpen: true,
+        intent,
         icon,
         content,
       } 
@@ -1892,7 +1896,7 @@ export default class Annotator extends Component<
             ) : null}
             <Alert
               isOpen={this.state.alert.isOpen}
-              intent={Intent.WARNING}
+              intent={this.state.alert.intent}
               icon={this.state.alert.icon}
               onClose={this.handleAlertClose}
               className={this.props.useDarkTheme ? "bp3-dark" : ""}
