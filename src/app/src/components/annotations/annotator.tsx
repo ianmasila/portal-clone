@@ -174,22 +174,6 @@ interface AnnotatorState {
   currAnnotationPlaybackId: number;
 }
 
-// TODO: DELETE
-// type AnnotationOptionsMenuSelection = {
-//   intersect: boolean;
-//   selectedAnnotation: L.Layer | null;
-//   otherAnnotation: L.Layer | null;
-// };
-
-/**
- * Annotations are Leaflet layers with additional
- * editing and options properties
- */
-interface AnnotationLayer extends L.Layer {
-  editing: any;
-  options: any;
-}
-
 /**
  * This Annotator class is a super class of the annotator controls, image select
  * as well as the leaflet map for annotation drawing.
@@ -372,6 +356,9 @@ export default class Annotator extends Component<
     this.setAnnotationOptions = this.setAnnotationOptions.bind(this);
     this.toggleShowSelected = this.toggleShowSelected.bind(this);
     this.setAnnotatedAssetsHidden = this.setAnnotatedAssetsHidden.bind(this);
+    this.intersectAnnotations = this.intersectAnnotations.bind(
+      this
+    );
   }
 
   async componentDidMount(): Promise<void> {
@@ -474,27 +461,13 @@ export default class Annotator extends Component<
     }
 
     /* Results of annotation menu option, e.g. show intersection polygon */
-    /* @TODO: Show results on canvas */
     const annotationOptionsSelectedAnnotation = this.state.annotationOptionsMenuSelection.selectedAnnotation;
     const annotationOptionsOtherAnnotation = this.state.annotationOptionsMenuSelection.otherAnnotation;
     const annotationOptionsIsIntersect = this.state.annotationOptionsMenuSelection.intersect;
 
     if (annotationOptionsSelectedAnnotation && annotationOptionsOtherAnnotation) {
       if (annotationOptionsIsIntersect) {
-        console.log("🚀 ~ componentDidUpdate ~ annotationOptionsIsIntersect:", annotationOptionsIsIntersect)
-        const intersection = GetAnnotationIntersection(
-          annotationOptionsSelectedAnnotation as L.Layer as PolylineObjectType,
-          annotationOptionsOtherAnnotation as L.Layer as PolylineObjectType,
-        );
-        console.log("🚀 ~ componentDidUpdate ~ intersection:", intersection)
-  
-        if (intersection) {
-          // FIXME: Highlight the intersection area with red border on the polygon
-          // Pan canvas to intersection and draw highlight over intersection area on the canvas
-          intersection.setStyle({ color: "red" });
-        } else {
-          alert("No intersection found");
-        }
+        this.intersectAnnotations(annotationOptionsSelectedAnnotation, annotationOptionsOtherAnnotation);
       }
     
       // Reset annotation options menu selection
@@ -703,6 +676,34 @@ export default class Annotator extends Component<
         ),
       });
     }
+  }
+
+  /**
+   * Intersect 2 annotations in annotationGroup
+   * @param annotation1 - The first annotation to intersect
+   * @param annotation2 - The second annotation to intersect
+   * @returns {AnnotationLayer} The intersected annotation as a polygon or null if no intersection
+   * 
+   */
+  public intersectAnnotations(annotation1: AnnotationLayer, annotation2: AnnotationLayer): AnnotationLayer {
+    const intersection = GetAnnotationIntersection(
+      annotation1 as L.Layer as PolylineObjectType,
+      annotation2 as L.Layer as PolylineObjectType,
+    );
+
+    if (intersection) {
+      // FIXME: Highlight the intersection area with red border on the polygon
+      // Pan canvas to intersection and draw highlight over intersection area on the canvas
+      this.map.addLayer(intersection);
+      // Remove the original annotations from the map
+      this.map.removeLayer(annotation1);
+      this.map.removeLayer(annotation1);
+    } else {
+      this.handleAlertOpen(AlertContent.INTERSECT.EMPTY_RESULT);
+    }
+
+    const result = intersection as L.Layer as AnnotationLayer;
+    return result;
   }
 
   /**

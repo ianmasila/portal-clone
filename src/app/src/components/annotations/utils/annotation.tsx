@@ -44,6 +44,9 @@ export const GetAnnotationColour = (
 
 /**
  * Get intersection of two annotations with area
+ * @param annotation1 - The first annotation to intersect
+ * @param annotation2 - The second annotation to intersect
+ * @returns The intersected annotation as a polygon or null if no intersection
  */
 export function GetAnnotationIntersection(
   annotation1: PolylineObjectType,
