@@ -16,7 +16,6 @@ import {
   IToastProps,
   Icon,
   Intent,
-  Alert,
 } from "@blueprintjs/core";
 
 import makeEta from "simple-eta";
@@ -45,7 +44,7 @@ import {
   APIGetPredictionProgress,
 } from "@portal/api/annotation";
 
-import { invert, cloneDeep, isEmpty } from "lodash";
+import { invert, cloneDeep, isEmpty, pick } from "lodash";
 
 import { CreateGenericToast } from "@portal/utils/ui/toasts";
 import AnnotatorInstanceSingleton from "./utils/annotator.singleton";
@@ -59,7 +58,6 @@ import { RegisteredModel } from "./model";
 
 import AnnotationOptionsMenu from "./annotationoptionsmenu";
 import { AlertContent } from "@portal/constants/annotation";
-import { throws } from "assert";
 
 type Point = [number, number];
 type MapType = L.DrawMap;
@@ -700,11 +698,9 @@ export default class Annotator extends Component<
    * 
    */
   public intersectAnnotations(annotation1: AnnotationLayer, annotation2: AnnotationLayer): AnnotationLayer {
-    const intersection = GetAnnotationIntersection(
-      annotation1 as L.Layer as PolylineObjectType, 
-      annotation2 as L.Layer as PolylineObjectType
-    );
-
+    const poly1 = annotation1 as L.Layer as PolylineObjectType;
+    const poly2 = annotation2 as L.Layer as PolylineObjectType;
+    const intersection = GetAnnotationIntersection(poly1, poly2);
     if (intersection) {
       const intersectionWithListeners = AttachAnnotationHandlers(
         this.map, 
@@ -720,6 +716,15 @@ export default class Annotator extends Component<
       // Remove the original annotations from the map's annotation group
       this.annotationGroup.removeLayer(annotation1);
       this.annotationGroup.removeLayer(annotation2);
+
+      // Note: Update canvas' annotations. This is a workaround since `filterAnnotationVisibility` needs quite some refactoring
+      const newAssetAnnotations = (this.state.currentAssetAnnotations as PolylineObjectType[]).slice().filter(annotation => 
+        annotation !== poly1 && annotation !== poly2);
+      newAssetAnnotations.push(intersectionWithListeners);
+
+      this.setState({
+        currentAssetAnnotations: newAssetAnnotations,
+      });
 
       this.addNewTag(options.annotationID, options.annotationTag);
       this.updateMenuBarAnnotations();
