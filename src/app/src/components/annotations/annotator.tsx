@@ -224,6 +224,9 @@ export default class Annotator extends Component<
 
   /* Reference to background Image or Video */
   backgroundImg: HTMLElement | null;
+  
+  /* Annotation options menu */
+  private annotationCallbacks: { handleAnnotationRightClick: any; handleAnnotationLeftClick: any};
 
   constructor(props: AnnotatorProps) {
     super(props);
@@ -300,6 +303,11 @@ export default class Annotator extends Component<
     /* Image Bar Reference to Track Which Image is Selected */
     this.imagebarRef = React.createRef();
     this.backgroundImg = null;
+
+    this.annotationCallbacks = {
+      handleAnnotationRightClick: this.handleAnnotationRightClick,
+      handleAnnotationLeftClick: this.handleAnnotationLeftClick,
+    };
 
     this.selectAsset = this.selectAsset.bind(this);
     this.showToaster = this.showToaster.bind(this);
@@ -702,10 +710,8 @@ export default class Annotator extends Component<
         intersection,
         this.project, 
         (intersection.options as any).annotationID, 
-        {
-          handleAnnotationRightClick: this.handleAnnotationRightClick,
-          handleAnnotationLeftClick: this.handleAnnotationLeftClick,
-        });
+        this.annotationCallbacks,
+      );
       const options = intersectionWithListeners.options as any;
       // Add intersection to map's annotation group
       this.annotationGroup.addLayer(intersectionWithListeners);
@@ -1023,10 +1029,7 @@ export default class Annotator extends Component<
       this.currentAsset.metadata.height,
       // eslint-disable-next-line react/no-access-state-in-setstate
       this.state.tagInfo.tags,
-      {
-        handleAnnotationRightClick: this.handleAnnotationRightClick,
-        handleAnnotationLeftClick: this.handleAnnotationLeftClick,
-      }
+      this.annotationCallbacks,
     );
 
     this.annotationGroup.clearLayers();
@@ -1916,11 +1919,13 @@ export default class Annotator extends Component<
               />
             ) : null}
             <Alert
+              className={this.props.useDarkTheme ? "bp3-dark" : ""}
               isOpen={this.state.alert.isOpen}
               intent={this.state.alert.intent}
               icon={this.state.alert.icon}
               onClose={this.handleAlertClose}
-              className={this.props.useDarkTheme ? "bp3-dark" : ""}
+              canOutsideClickCancel={true}
+              canEscapeKeyCancel={true}
             >
               {this.state.alert.content}
             </Alert>

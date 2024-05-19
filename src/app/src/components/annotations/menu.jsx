@@ -277,6 +277,16 @@ export default class AnnotationMenu extends Component {
       </div>
     );
 
+
+    /* Refactor using componentDidMount so that names are more descriptive */
+    // Handle tag names containing 'x'
+    // Object.entries(this.tagNames).forEach(([id, name]) => {
+    //   if (name.includes('x')) {
+    //     const ids = name.split('x').map(Number);
+    //     this.tagNames[id] = `${this.tagNames[ids[0]]}x${this.tagNames[ids[1]]}`;
+    //   }
+    // });
+
     /**
      * List of annotations to be displayed under Annotations tab
      */
