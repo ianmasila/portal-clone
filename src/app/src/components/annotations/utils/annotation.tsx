@@ -44,7 +44,6 @@ export function GetAnnotationIntersection(
   annotation1: PolylineObjectType,
   annotation2: PolylineObjectType
 ): PolylineObjectType | null {
-  console.log("🚀 ~ GetAnnotationIntersection...")
   const poly1 = annotation1 as L.Polygon;
   const poly2 = annotation2 as L.Polygon;
   const poly1GeoJSON = poly1.toGeoJSON();
@@ -55,9 +54,7 @@ export function GetAnnotationIntersection(
   if (intersection && intersection.geometry.type === 'Polygon') {
     const primitiveOptions = PrimitiveShapeOptions;
     const options1 = annotation1.options as any;
-    console.log("🚀 ~ options1:", options1)
-    const options2 = annotation1.options as any;
-    console.log("🚀 ~ options2:", options2)
+    const options2 = annotation2.options as any;
 
     /**
      * Set Primitive Shape Options to Project Tags

@@ -732,7 +732,7 @@ export default class Annotator extends Component<
       this.updateMenuBarAnnotations();
       this.bindAnnotationTooltip(intersectionWithListeners, options.annotationID);
     } else {
-      this.toaster.show(this.renderAlert(AlertContent.INTERSECT.EMPTY_RESULT, 2000));
+      this.toaster.show(this.renderAlert(AlertContent.INTERSECT.EMPTY_RESULT, undefined, Intent.WARNING, 2000));
     }
 
     const result = intersection as L.Layer as AnnotationLayer;
@@ -1185,7 +1185,7 @@ export default class Annotator extends Component<
       const selection = prevState.annotationOptionsMenuSelection;
       if (key === "intersect") {
         selection.intersect = value.intersect;
-        this.toaster.show(this.renderAlert(AlertContent.INTERSECT.PROMPT, 2000));
+        this.toaster.show(this.renderAlert(AlertContent.INTERSECT.PROMPT, undefined, undefined, 2000));
       }
      
       return { annotationOptionsMenuSelection: selection };
@@ -1658,10 +1658,12 @@ export default class Annotator extends Component<
     return toastProps;
   }
 
-  private renderAlert(message: string, timeout?: number, onDismiss?: (didTimeoutExpire: boolean) => void): IToastProps {
+  private renderAlert(message: string, icon?: any, intent?: Intent, timeout?: number, onDismiss?: (didTimeoutExpire: boolean) => void): IToastProps {
     const toastProps: IToastProps = {
       className: `bp3-text-muted ${this.props.useDarkTheme ? "bp3-dark" : ""}`,
+      icon: icon,
       message: <p>{message}</p>,
+      intent: intent,
       onDismiss: onDismiss,
       timeout: timeout ??  5000,
     };

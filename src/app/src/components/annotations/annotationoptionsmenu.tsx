@@ -37,7 +37,7 @@ const AnnotationOptionsMenu: React.FC<AnnotationOptionsMenuProps> = ({ position,
   }
 
   return (
-      <div className={styles.menu} style={{ top: `${position.y - 21}px`, left: `${position.x + 24}px` }}>
+      <div className={styles.menu} style={{ top: `${position.y }px`, left: `${position.x + 24}px` }}>
         <Menu>
           <MenuItem
             className={styles.menuItem}
