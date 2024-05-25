@@ -5,6 +5,8 @@
     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15);
     /* Subtle shadow */
     z-index: 1000;
+    width: 150px;
+    margin: 0;
     padding: 0;
     /* No padding, let the menu items handle the padding */
     border-radius: 3px;
@@ -14,7 +16,7 @@
 }
 
 .menuItem {
-    padding: 8px 8px;
+    padding: 8px;
     /* Padding for menu items */
     cursor: pointer;
     /* Pointer cursor */
@@ -22,6 +24,16 @@
     /* Font size */
     color: #333;
     /* Dark text color */
+    white-space: nowrap;
+    /* Prevent text from wrapping */
+    overflow: hidden;
+    /* Hide overflow */
+    text-overflow: ellipsis;
+    /* Add ellipsis for overflowing text */
+    width: calc(100% - 16px);
+    /* Adjust width to account for padding */
+    box-sizing: border-box;
+    /* Include padding and border in element's total width and height */
 }
 
 .menuItem:hover {
@@ -34,21 +46,4 @@
     /* Divider color */
     margin: 0;
     /* No margin */
-}
-
-.closeButton {
-    position: absolute;
-    top: 4px;
-    /* Adjust top positioning */
-    right: 4px;
-    /* Adjust right positioning */
-    cursor: pointer;
-    color: #f0f0f0;
-    /* Dark text color */
-    font-size: 14px;
-    /* Smaller font size for icon */
-    padding: 2px;
-    /* Add some padding for better click area */
-    border-radius: 3px;
-    /* Slightly rounded corners */
 }

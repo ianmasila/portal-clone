@@ -175,7 +175,9 @@ interface AnnotatorState {
     icon: any;
     content: string;
   },
-  currAnnotationPlaybackId: number;
+  currAnnotationPlaybackId: number,
+  /* Currently selected annotation */
+  selectedAnnotation: AnnotationLayer | null,
 }
 
 /**
@@ -192,6 +194,8 @@ export default class Annotator extends Component<
   private imageOverlay!: L.ImageOverlay;
   private videoOverlay!: L.VideoOverlay;
   private annotationGroup!: L.FeatureGroup;
+  private drawnFeatures: L.FeatureGroup;
+  public drawControl: L.Control.Draw;
 
   /* Project Properties */
   private project: string;
@@ -225,6 +229,7 @@ export default class Annotator extends Component<
   backgroundImg: HTMLElement | null;
   
   /* Annotation options menu */
+  private annotationOptionsMenuRef: React.RefObject<HTMLDivElement>;
   private annotationCallbacks: { handleAnnotationRightClick: any; handleAnnotationLeftClick: any};
 
   constructor(props: AnnotatorProps) {
@@ -281,6 +286,7 @@ export default class Annotator extends Component<
         content: "",
       },
       currAnnotationPlaybackId: 0,
+      selectedAnnotation: null,
     };
 
     this.toaster = new Toaster({}, {});
@@ -289,15 +295,24 @@ export default class Annotator extends Component<
     this.currentTag = 0;
     this.project = this.props.project;
     this.menubarRef = React.createRef();
+    this.annotationOptionsMenuRef = React.createRef();
     this.menubarElement = undefined;
 
     this.isFirstCallPerformed = false;
 
     /* Placeholder Value for Initialization */
     this.currentAsset = {} as AssetAPIObject;
-    this.selectedAnnotation = null;
+    this.selectedAnnotation = this.state.selectedAnnotation;
 
     this.annotationGroup = new L.FeatureGroup();
+    this.drawnFeatures = new L.FeatureGroup();
+    this.drawControl = 
+      new L.Control.Draw({
+        edit: {
+          featureGroup: this.annotationGroup,
+          remove: true,
+        },
+      });
 
     /* Image Bar Reference to Track Which Image is Selected */
     this.imagebarRef = React.createRef();
@@ -398,9 +413,29 @@ export default class Annotator extends Component<
       attributionControl: false,
       zoomControl: false,
       doubleClickZoom: false,
+      // drawControl: true,
+      drawControlTooltips: true,
     }).setView(Coordinate(5000, 5000), 0);
 
     this.annotationGroup.addTo(this.map);
+    this.drawControl.addTo(this.map);
+    
+
+    // Add event listener for when a new shape is created
+    this.map.on(L.Draw.Event.CREATED,  (e) => {
+      console.log("🚀 ~ this.map.on draw created ~ e:", e)
+      const layer = e.layer;
+      const layerWithListeners = AttachAnnotationHandlers(
+        this.map, 
+        this.annotationGroup, 
+        layer,
+        this.project, 
+        (layer.options as any).annotationID, 
+        this.annotationCallbacks,
+      );
+      this.drawnFeatures.addLayer(layerWithListeners);
+      this.annotationGroup.addLayer(layerWithListeners);
+    });
 
     this.map.on("mouseup", () => {
       if (this.videoOverlay) {
@@ -626,22 +661,43 @@ export default class Annotator extends Component<
    * @param annotation - annotation layer to be selected
    */
   public setSelectedAnnotation(annotation: AnnotationLayer | null): void {
+    // console.log("🚀 ~ setSelectedAnnotation ~ annotation:", annotation)
     /* Deselect previous annotation */
-    if (this.selectedAnnotation) {
-      this.selectedAnnotation.options.fillOpacity = 0.35;
-      this.selectedAnnotation.fire("mouseout");
-    }
+    // if (this.selectedAnnotation) {
+    //   this.selectedAnnotation.options.fillOpacity = 0.35;
+    //   this.selectedAnnotation.editing.disable();
+    //   this.selectedAnnotation.fire("mouseout");
+    // }
 
-    /* Select new annotation */
-    this.selectedAnnotation = annotation;
-    if (this.selectedAnnotation) {
-      /* If annotation not null, enable editing */
-      this.selectedAnnotation.options.fillOpacity = 0.7;
-    }
+    // /* Select new annotation */
+    // this.selectedAnnotation = annotation;
+    // if (this.selectedAnnotation) {
+    //   this.selectedAnnotation.options.fillOpacity = 0.7;
+    //   /* If annotation not null, enable editing */
+    //   this.selectedAnnotation.editing.enable();
+    // }
 
-    /* Update selected annotation on menubar */
-    if (this.menubarRef.current !== null)
-      this.menubarRef.current.setSelectedAnnotation(annotation);
+    this.setState(
+      prevState => {
+        const prevAnnotation = prevState.selectedAnnotation;
+        if (prevAnnotation) {
+          prevAnnotation.options.fillOpacity = 0.35;
+          prevAnnotation.editing.disable();
+          prevAnnotation.fire("mouseout");
+        }
+        if (annotation) {
+          annotation.options.fillOpacity = 0.7;
+          annotation.editing.enable();
+        }
+
+        /* Update selected annotation on menubar */
+        if (this.menubarRef.current !== null) {
+          this.menubarRef.current.setSelectedAnnotation(annotation);
+        }
+
+        return { selectedAnnotation: annotation };
+      },
+    )
   }
 
   /**
@@ -1145,9 +1201,8 @@ export default class Annotator extends Component<
   private handleAnnotationRightClick = (event: L.LeafletMouseEvent, annotation: L.Layer) => {
     event.originalEvent.preventDefault();
     event.originalEvent.stopPropagation();
-    const point = this.map.latLngToContainerPoint(event.latlng);
-    const x = point.x;
-    const y = point.y;
+    const x = event.originalEvent.clientX;
+    const y = event.originalEvent.clientY;
     this.setState(prevState => {
       return {
         annotationOptionsMenuOpen: true,
@@ -1165,6 +1220,10 @@ export default class Annotator extends Component<
     if (this.state.annotationOptionsMenuOpen) {
       return;
     };
+
+    /* TODO: Default behaviour: select annotation and be able to edit it */
+    this.setSelectedAnnotation(annotation as AnnotationLayer);
+
     /* If annotation menu option was selected, update selection data */
     const annotationOptionsSelectedAnnotation = this.state.annotationOptionsMenuSelection.selectedAnnotation;
     if (annotationOptionsSelectedAnnotation) {
@@ -1177,6 +1236,7 @@ export default class Annotator extends Component<
         }
       })
     }
+
   };
 
   /* For now, we only support `intersect` */
@@ -1933,6 +1993,7 @@ export default class Annotator extends Component<
             {/* Annotation Options Menu */}
             {this.state.annotationOptionsMenuOpen ? (
               <AnnotationOptionsMenu
+                ref={this.annotationOptionsMenuRef}
                 position={this.state.annotationOptionsMenuPosition}
                 onClose={
                   !this.state.annotationOptionsMenuOpen

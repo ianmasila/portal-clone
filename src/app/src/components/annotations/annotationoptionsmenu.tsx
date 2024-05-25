@@ -1,6 +1,7 @@
-import React from 'react';
-import { Icon, Menu, MenuItem } from '@blueprintjs/core';
+import React, { forwardRef } from 'react';
+import { Menu, MenuItem } from '@blueprintjs/core';
 import styles from './annotationoptionsmenu.module.css';
+import { useOnClickOutside } from '../../hooks/useOnClickOutside';
 
 interface AnnotationOptionsMenuProps {
   position: {
@@ -13,69 +14,57 @@ interface AnnotationOptionsMenuProps {
   };
 }
 
-const AnnotationOptionsMenu: React.FC<AnnotationOptionsMenuProps> = ({ position, onClose, callbacks }) => {
-  // @TODO: Remove close button and close when user clicks outside menu
-  // const menuRef = useRef<HTMLDivElement | null>(null);
+const AnnotationOptionsMenu = forwardRef<HTMLDivElement, AnnotationOptionsMenuProps>(
+  ({ position, onClose, callbacks }, ref) => {
 
-  // useEffect(() => {
-  //   const handleClickOutside = (event: MouseEvent) => {
-  //     console.log('handle...');
-  //     if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
-  //       console.log("clicked outside.")
-  //       onClose();
-  //     }
-  //   };
+    // Listen and respond to clicks outside menu
+    useOnClickOutside(ref, 'mousedown', onClose);
 
-  //   document.addEventListener('mousedown', handleClickOutside);
-  //   return () => {
-  //     document.removeEventListener('mousedown', handleClickOutside);
-  //   };
-  // }, [onClose]);
+    if (!position) {
+      return null;
+    }
 
-  if (!position) {
-    return null;
-  }
-
-  return (
-      <div className={styles.menu} style={{ top: `${position.y }px`, left: `${position.x + 24}px` }}>
-        <Menu>
-          <MenuItem
-            className={styles.menuItem}
-            icon="intersection"
-            text="Intersect"
-            onClick={() => {
-              callbacks.handleAnnotationOptionsMenuSelection({
-                intersect: true,
-              }, 'intersect');
-              onClose();
-            }}
-          />
-          <MenuItem
-            className={styles.menuItem}
-            icon="add"
-            text="Merge"
-            onClick={() => {
-              callbacks.handleAnnotationOptionsMenuSelection({ merge: true }, 'merge');
-              onClose();
-            }}
-            disabled
-          />
-          <MenuItem
-            className={styles.menuItem}
-            icon="minus"
-            text="Subtract"
-            onClick={() => {
-              callbacks.handleAnnotationOptionsMenuSelection({ subtract: true }, 'subtract');
-              onClose();
-            }}
-            disabled
-          />
-        </Menu>
-        <div className={styles.closeButton} onClick={onClose}>
-          <Icon icon="cross" iconSize={14} />
+    return (
+        <div 
+          className={styles.menu} 
+          style={{ top: `${position.y - 42}px`, left: `${position.x}px` }}
+          ref={ref}
+        >
+          <Menu>
+            <MenuItem
+              className={styles.menuItem}
+              icon="intersection"
+              text="Intersect"
+              onClick={() => {
+                callbacks.handleAnnotationOptionsMenuSelection({
+                  intersect: true,
+                }, 'intersect');
+                onClose();
+              }}
+            />
+            <MenuItem
+              className={styles.menuItem}
+              icon="add"
+              text="Merge"
+              onClick={() => {
+                callbacks.handleAnnotationOptionsMenuSelection({ merge: true }, 'merge');
+                onClose();
+              }}
+              disabled
+            />
+            <MenuItem
+              className={styles.menuItem}
+              icon="minus"
+              text="Subtract"
+              onClick={() => {
+                callbacks.handleAnnotationOptionsMenuSelection({ subtract: true }, 'subtract');
+                onClose();
+              }}
+              disabled
+            />
+          </Menu>
         </div>
-      </div>
-  );
-};
+    );
+});
 
 export default AnnotationOptionsMenu;
