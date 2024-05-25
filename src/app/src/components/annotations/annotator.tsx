@@ -58,6 +58,7 @@ import { RegisteredModel } from "./model";
 
 import AnnotationOptionsMenu from "./annotationoptionsmenu";
 import { AlertContent } from "@portal/constants/annotation";
+import { useOnClickOutside } from "../../hooks/useOnClickOutside";
 
 type Point = [number, number];
 type MapType = L.DrawMap;
@@ -213,7 +214,7 @@ export default class Annotator extends Component<
   private currentTag: number;
   private menubarRef: React.RefObject<AnnotationMenu>;
   private menubarElement: HTMLElement | undefined;
-  private selectedAnnotation: AnnotationLayer | null;
+  // private selectedAnnotation: AnnotationLayer | null;
 
   /* State for first call on video inference toaster */
   private isFirstCallPerformed: boolean;
@@ -302,7 +303,7 @@ export default class Annotator extends Component<
 
     /* Placeholder Value for Initialization */
     this.currentAsset = {} as AssetAPIObject;
-    this.selectedAnnotation = this.state.selectedAnnotation;
+    // this.selectedAnnotation = this.state.selectedAnnotation;
 
     this.annotationGroup = new L.FeatureGroup();
     this.drawnFeatures = new L.FeatureGroup();
@@ -361,6 +362,9 @@ export default class Annotator extends Component<
       this
     );
     this.handleAnnotationOptionsMenuReset = this.handleAnnotationOptionsMenuReset.bind(
+      this
+    );
+    this.handleMouseUp = this.handleMouseUp.bind(
       this
     );
     this.handleAnnotationRightClick = this.handleAnnotationRightClick.bind(
@@ -462,7 +466,12 @@ export default class Annotator extends Component<
 
     /* Slight delay so that all images can be reliably fetched from the server */
     setTimeout(() => this.updateImage(), 200);
+
+    /* Document listeners */
+    document.addEventListener('mouseup', this.handleMouseUp);
   }
+
+
 
   // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
   componentDidUpdate() {
@@ -527,12 +536,38 @@ export default class Annotator extends Component<
 
   componentWillUnmount(): void {
     /* Check if Menubar Targetted */
-    if (this.menubarElement !== undefined)
+    if (this.menubarElement !== undefined) {
       this.menubarElement.removeEventListener(
         "onwheel" in document ? "wheel" : "mousewheel",
         this.handleVerticalScrolling
       );
+    }
+
+    document.removeEventListener('mouseup', this.handleMouseUp);
   }
+
+  private handleMouseUp(e: MouseEvent) {
+    // Check if the target is within the map container
+    const mapContainer = this.map.getContainer();
+    if (!mapContainer.contains(e.target as Node)) {
+      this.setSelectedAnnotation(null);
+      return;
+    }
+
+    // Check if the target is an annotation layer
+    const annotationLayers = this.annotationGroup.getLayers();
+    for (const layer of annotationLayers) {
+      const layerElement = (layer as any)._path || (layer as any)._icon;
+      if (layerElement && layerElement === e.target) {
+        console.log('Annotation layer clicked:', layer);
+        this.setSelectedAnnotation(layer as AnnotationLayer);
+        return; // Stop the iteration once the layer is found
+      }
+    }
+
+    this.setSelectedAnnotation(null);
+  }
+  
 
   private handlePlayPauseVideoOverlay() {
     const videoElement = this.videoOverlay?.getElement();
@@ -656,6 +691,8 @@ export default class Annotator extends Component<
     );
   }
 
+
+  // WHY RENDER IS BEHIND???
   /**
    * Set selected annotation to new annotation
    * @param annotation - annotation layer to be selected
@@ -1198,7 +1235,7 @@ export default class Annotator extends Component<
   };
 
   /* Handle right click events on annotations */
-  private handleAnnotationRightClick = (event: L.LeafletMouseEvent, annotation: L.Layer) => {
+  private handleAnnotationRightClick = (event: L.LeafletMouseEvent, annotation: AnnotationLayer) => {
     event.originalEvent.preventDefault();
     event.originalEvent.stopPropagation();
     const x = event.originalEvent.clientX;
@@ -1209,20 +1246,21 @@ export default class Annotator extends Component<
         annotationOptionsMenuPosition: { x, y },
         annotationOptionsMenuSelection: {
           ...prevState.annotationOptionsMenuSelection,
-          selectedAnnotation: annotation as AnnotationLayer,
+          selectedAnnotation: annotation,
         }
       }
     })
   };
 
   /* Handle left click events on annotations */
-  private handleAnnotationLeftClick = (event: L.LeafletMouseEvent, annotation: L.Layer) => {
+  private handleAnnotationLeftClick = (event: L.LeafletMouseEvent, annotation: AnnotationLayer) => {
     if (this.state.annotationOptionsMenuOpen) {
       return;
     };
 
     /* TODO: Default behaviour: select annotation and be able to edit it */
-    this.setSelectedAnnotation(annotation as AnnotationLayer);
+    annotation.editing.enable();
+    // this.setSelectedAnnotation(annotation);
 
     /* If annotation menu option was selected, update selection data */
     const annotationOptionsSelectedAnnotation = this.state.annotationOptionsMenuSelection.selectedAnnotation;

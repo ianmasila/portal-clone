@@ -14,7 +14,7 @@ import {
   TagColours,
 } from "@portal/constants/annotation";
 import { AssetAPIObject } from "@portal/api/annotation";
-import { PolylineObjectType } from "@portal/components/annotations/types";
+import { AnnotationLayer, PolylineObjectType } from "@portal/components/annotations/types";
 import { blendHexColors } from "@portal/utils/index";
 
 /**
@@ -98,8 +98,8 @@ export const AttachAnnotationHandlers = (
   project: string,
   annotationID: string | undefined,
   callbacks?: {
-    handleAnnotationRightClick?: (event: L.LeafletMouseEvent, annotation: L.Layer) => void;
-    handleAnnotationLeftClick?: (event: L.LeafletMouseEvent, annotation: L.Layer) => void;
+    handleAnnotationRightClick?: (event: L.LeafletMouseEvent, annotation: AnnotationLayer) => void;
+    handleAnnotationLeftClick?: (event: L.LeafletMouseEvent, annotation: AnnotationLayer) => void;
   } 
 ): PolylineObjectType => {
   // Add right-click event listener to the layer
@@ -140,8 +140,8 @@ export function RenderAssetAnnotations(
   assetHeight: number,
   tags: { [tag: string]: number },
   callbacks?: {
-    handleAnnotationRightClick?: (event: L.LeafletMouseEvent, annotation: L.Layer) => void;
-    handleAnnotationLeftClick?: (event: L.LeafletMouseEvent, annotation: L.Layer) => void;
+    handleAnnotationRightClick?: (event: L.LeafletMouseEvent, annotation: AnnotationLayer) => void;
+    handleAnnotationLeftClick?: (event: L.LeafletMouseEvent, annotation: AnnotationLayer) => void;
   } 
 ): Array<PolylineObjectType> {
   const polylineObjects: Array<PolylineObjectType> = [];
