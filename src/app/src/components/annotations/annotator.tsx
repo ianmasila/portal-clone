@@ -364,7 +364,7 @@ export default class Annotator extends Component<
     this.handleAnnotationOptionsMenuReset = this.handleAnnotationOptionsMenuReset.bind(
       this
     );
-    this.handleMouseUp = this.handleMouseUp.bind(
+    this.handleClick = this.handleClick.bind(
       this
     );
     this.handleAnnotationRightClick = this.handleAnnotationRightClick.bind(
@@ -468,7 +468,7 @@ export default class Annotator extends Component<
     setTimeout(() => this.updateImage(), 200);
 
     /* Document listeners */
-    document.addEventListener('mouseup', this.handleMouseUp);
+    document.addEventListener('click', this.handleClick);
   }
 
 
@@ -543,23 +543,25 @@ export default class Annotator extends Component<
       );
     }
 
-    document.removeEventListener('mouseup', this.handleMouseUp);
+    document.removeEventListener('mouseup', this.handleClick);
   }
 
-  private handleMouseUp(e: MouseEvent) {
-    // Check if the target is within the map container
-    const mapContainer = this.map.getContainer();
-    if (!mapContainer.contains(e.target as Node)) {
-      this.setSelectedAnnotation(null);
+  private handleClick(e: MouseEvent) {
+    if (this.state.annotationOptionsMenuOpen) {
       return;
+    };
+    // FIXME: Check if the target is part of the currently selected annotation being edited
+    if (this.state.selectedAnnotation) {
+      const selectedAnnotationElement = (this.state.selectedAnnotation as any)._path || (this.state.selectedAnnotation as any)._icon;
+      if (selectedAnnotationElement && selectedAnnotationElement.contains(e.target as Node)) {
+        return;
+      }
     }
-
     // Check if the target is an annotation layer
     const annotationLayers = this.annotationGroup.getLayers();
     for (const layer of annotationLayers) {
       const layerElement = (layer as any)._path || (layer as any)._icon;
       if (layerElement && layerElement === e.target) {
-        console.log('Annotation layer clicked:', layer);
         this.setSelectedAnnotation(layer as AnnotationLayer);
         return; // Stop the iteration once the layer is found
       }
@@ -698,22 +700,6 @@ export default class Annotator extends Component<
    * @param annotation - annotation layer to be selected
    */
   public setSelectedAnnotation(annotation: AnnotationLayer | null): void {
-    // console.log("🚀 ~ setSelectedAnnotation ~ annotation:", annotation)
-    /* Deselect previous annotation */
-    // if (this.selectedAnnotation) {
-    //   this.selectedAnnotation.options.fillOpacity = 0.35;
-    //   this.selectedAnnotation.editing.disable();
-    //   this.selectedAnnotation.fire("mouseout");
-    // }
-
-    // /* Select new annotation */
-    // this.selectedAnnotation = annotation;
-    // if (this.selectedAnnotation) {
-    //   this.selectedAnnotation.options.fillOpacity = 0.7;
-    //   /* If annotation not null, enable editing */
-    //   this.selectedAnnotation.editing.enable();
-    // }
-
     this.setState(
       prevState => {
         const prevAnnotation = prevState.selectedAnnotation;
@@ -819,9 +805,7 @@ export default class Annotator extends Component<
         annotation !== poly1 && annotation !== poly2);
       newAssetAnnotations.push(intersectionWithListeners);
 
-      this.setState({
-        currentAssetAnnotations: newAssetAnnotations,
-      });
+      this.updateCurrentAssetAnnotations(newAssetAnnotations);
       this.updateMenuBarAnnotations();
       this.bindAnnotationTooltip(intersectionWithListeners, options.annotationID);
     } else {
@@ -1145,6 +1129,8 @@ export default class Annotator extends Component<
       currentAssetAnnotations,
     });
 
+    /* Update current asset annotations. Used in visibility functionality */
+    this.updateCurrentAssetAnnotations
     /* Update menu bar annotations */
     this.updateMenuBarAnnotations();
     /* Show all annotations */
@@ -1259,7 +1245,7 @@ export default class Annotator extends Component<
     };
 
     /* TODO: Default behaviour: select annotation and be able to edit it */
-    annotation.editing.enable();
+    // annotation.editing.enable();
     // this.setSelectedAnnotation(annotation);
 
     /* If annotation menu option was selected, update selection data */
@@ -1453,18 +1439,23 @@ export default class Annotator extends Component<
     /* Render base tooltip first to check offset */
     layer.bindTooltip(
       `<span class='bp3-tag'
-      style='color: #FFFFFF;
-      border-radius: 6px !important;
-      background-color: ${layer.options.color};'>
+        style='
+          color: #FFFFFF;
+          border-radius: 6px !important;
+          background-color: ${layer.options.color};
+          z-index: -1;
+          pointer-events: none;'
+      >
         ${label ?? InvertedTags[layer.options.annotationTag] ?? ''}
       </span>`,
       {
-        interactive: !this.state.alwaysShowLabel,
+        interactive: false,
         permanent: this.state.alwaysShowLabel,
         opacity: 0.9,
-        direction: "center",
+        direction: 'center'
       }
     );
+    
   }
 
   /**
@@ -1647,6 +1638,18 @@ export default class Annotator extends Component<
       this.menubarRef.current.setAnnotations(this.annotationGroup);
     }
   }
+
+  /**
+   * Update annotations list in menu bar state
+   * to current annotationGroup
+   */
+  public updateCurrentAssetAnnotations(annotations: PolylineObjectType[]): void {
+    this.setState({
+      currentAssetAnnotations: annotations,
+    });
+  }
+
+ 
 
   /**
    * Set currently selected tag to target tag using respective hash
