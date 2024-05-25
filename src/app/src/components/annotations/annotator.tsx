@@ -231,7 +231,11 @@ export default class Annotator extends Component<
   
   /* Annotation options menu */
   private annotationOptionsMenuRef: React.RefObject<HTMLDivElement>;
-  private annotationCallbacks: { handleAnnotationRightClick: any; handleAnnotationLeftClick: any};
+  private annotationCallbacks: { 
+    handleAnnotationRightClick: any; 
+    handleAnnotationLeftClick: any, 
+    handleAnnotationEdit: any 
+  };
 
   constructor(props: AnnotatorProps) {
     super(props);
@@ -322,6 +326,7 @@ export default class Annotator extends Component<
     this.annotationCallbacks = {
       handleAnnotationRightClick: this.handleAnnotationRightClick,
       handleAnnotationLeftClick: this.handleAnnotationLeftClick,
+      handleAnnotationEdit: this.handleAnnotationEdit,
     };
 
     this.selectAsset = this.selectAsset.bind(this);
@@ -371,6 +376,9 @@ export default class Annotator extends Component<
       this
     );
     this.handleAnnotationLeftClick = this.handleAnnotationLeftClick.bind(
+      this
+    );
+    this.handleAnnotationEdit = this.handleAnnotationEdit.bind(
       this
     );
     this.handlePlayPauseVideoOverlay = this.handlePlayPauseVideoOverlay.bind(
@@ -439,6 +447,29 @@ export default class Annotator extends Component<
       );
       this.drawnFeatures.addLayer(layerWithListeners);
       this.annotationGroup.addLayer(layerWithListeners);
+    });
+
+    this.map.on(L.Draw.Event.EDITED,  (e) => {
+      console.log("🚀 ~ this.map.on draw edited ~ e:", e)
+      const layer = e.layer;
+      const polyLayer = layer as PolylineObjectType;
+      console.log("🚀 ~ this.map.on ~ polyLayer:", polyLayer)
+      // const layerWithListeners = AttachAnnotationHandlers(
+      //   this.map, 
+      //   this.annotationGroup, 
+      //   layer,
+      //   this.project, 
+      //   (layer.options as any).annotationID, 
+      //   this.annotationCallbacks,
+      // );
+      console.log("🚀 ~ this.map.on ~ currentAssetAnnotations len:", this.state.currentAssetAnnotations.length)
+
+      const newAssetAnnotations = (this.state.currentAssetAnnotations as PolylineObjectType[]).slice().filter(annotation => 
+        annotation !== layer as PolylineObjectType);
+      console.log("🚀 ~ this.map.on ~ NEW currentAssetAnnotations len:", newAssetAnnotations.length)
+      
+      newAssetAnnotations.push(layer as PolylineObjectType);
+      this.updateCurrentAssetAnnotations(newAssetAnnotations);
     });
 
     this.map.on("mouseup", () => {
@@ -1118,12 +1149,8 @@ export default class Annotator extends Component<
       this.annotationGroup.addLayer(annotation);
     });
 
-    this.setState({
-      currentAssetAnnotations,
-    });
-
     /* Update current asset annotations. Used in visibility functionality */
-    this.updateCurrentAssetAnnotations
+    this.updateCurrentAssetAnnotations(currentAssetAnnotations);
     /* Update menu bar annotations */
     this.updateMenuBarAnnotations();
     /* Show all annotations */
@@ -1252,7 +1279,17 @@ export default class Annotator extends Component<
         }
       })
     }
+  };
 
+  /* Handle left click events on annotations */
+  private handleAnnotationEdit = (event: L.LeafletEvent, annotation: AnnotationLayer) => {
+    console.log("🚀 ~ AssetAnnotations:", this.state.currentAssetAnnotations.length);
+    const newAssetAnnotations = (this.state.currentAssetAnnotations).slice().filter((annotation: any) => 
+      annotation !== event.sourceTarget);
+    console.log("🚀 ~ newAssetAnnotations:", newAssetAnnotations.length)
+    newAssetAnnotations.push(event.target as PolylineObjectType);
+
+    this.updateCurrentAssetAnnotations(newAssetAnnotations);
   };
 
   /* For now, we only support `intersect` */
@@ -1636,11 +1673,11 @@ export default class Annotator extends Component<
    * to current annotationGroup
    */
   public updateCurrentAssetAnnotations(annotations: PolylineObjectType[]): void {
+    console.log("🚀 ~ updateCurrentAssetAnnotations ~ updateCurrentAssetAnnotations:")
     this.setState({
       currentAssetAnnotations: annotations,
     });
   }
-
  
 
   /**

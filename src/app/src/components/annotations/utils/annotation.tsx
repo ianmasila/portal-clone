@@ -100,6 +100,8 @@ export const AttachAnnotationHandlers = (
   callbacks?: {
     handleAnnotationRightClick?: (event: L.LeafletMouseEvent, annotation: AnnotationLayer) => void;
     handleAnnotationLeftClick?: (event: L.LeafletMouseEvent, annotation: AnnotationLayer) => void;
+    handleAnnotationEdit?: (event: L.LeafletEvent, annotation: AnnotationLayer) => void;
+
   } 
 ): PolylineObjectType => {
   // Add right-click event listener to the layer
@@ -113,6 +115,12 @@ export const AttachAnnotationHandlers = (
       callbacks?.handleAnnotationLeftClick?.(event, layer);
     }
   });
+  // Add listeners for edit events
+  if (layer.editing) {
+    layer.on('edit', (event: L.LeafletEvent) => {
+      callbacks?.handleAnnotationEdit?.(event, layer);
+    });
+  }
 
   /**
    * Obtain Annotation ID from Layer Attribution of AnnotationID is Undefined
@@ -142,6 +150,7 @@ export function RenderAssetAnnotations(
   callbacks?: {
     handleAnnotationRightClick?: (event: L.LeafletMouseEvent, annotation: AnnotationLayer) => void;
     handleAnnotationLeftClick?: (event: L.LeafletMouseEvent, annotation: AnnotationLayer) => void;
+    handleAnnotationEdit?: (event: L.LeafletEvent, annotation: AnnotationLayer) => void;
   } 
 ): Array<PolylineObjectType> {
   const polylineObjects: Array<PolylineObjectType> = [];
