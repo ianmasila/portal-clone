@@ -543,33 +543,26 @@ export default class Annotator extends Component<
       );
     }
 
-    document.removeEventListener('mouseup', this.handleClick);
+    document.removeEventListener('click', this.handleClick);
   }
 
+  /* Handle general click events */
   private handleClick(e: MouseEvent) {
-    if (this.state.annotationOptionsMenuOpen) {
-      return;
-    };
-    // FIXME: Check if the target is part of the currently selected annotation being edited
-    if (this.state.selectedAnnotation) {
-      const selectedAnnotationElement = (this.state.selectedAnnotation as any)._path || (this.state.selectedAnnotation as any)._icon;
-      if (selectedAnnotationElement && selectedAnnotationElement.contains(e.target as Node)) {
-        return;
-      }
-    }
     // Check if the target is an annotation layer
+    let selectedAnnotation: AnnotationLayer | null = null;
     const annotationLayers = this.annotationGroup.getLayers();
     for (const layer of annotationLayers) {
       const layerElement = (layer as any)._path || (layer as any)._icon;
       if (layerElement && layerElement === e.target) {
-        this.setSelectedAnnotation(layer as AnnotationLayer);
+        selectedAnnotation = layer as AnnotationLayer;
         return; // Stop the iteration once the layer is found
       }
     }
 
-    this.setSelectedAnnotation(null);
+    if (!selectedAnnotation) {
+      this.setSelectedAnnotation(null);
+    }
   }
-  
 
   private handlePlayPauseVideoOverlay() {
     const videoElement = this.videoOverlay?.getElement();
@@ -1244,9 +1237,8 @@ export default class Annotator extends Component<
       return;
     };
 
-    /* TODO: Default behaviour: select annotation and be able to edit it */
-    // annotation.editing.enable();
-    // this.setSelectedAnnotation(annotation);
+    /* Default behaviour: select annotation and be able to edit it */
+    this.setSelectedAnnotation(event.target as AnnotationLayer);
 
     /* If annotation menu option was selected, update selection data */
     const annotationOptionsSelectedAnnotation = this.state.annotationOptionsMenuSelection.selectedAnnotation;
