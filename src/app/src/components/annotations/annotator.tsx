@@ -1321,91 +1321,33 @@ export default class Annotator extends Component<
   }
   
   private handleMouseUp = (e: L.LeafletMouseEvent) => {
-    console.log("🚀 ~ handleMouseUp:", e)
-
     /* Select annotation */ 
-
-    // this.setSelectedAnnotation(e.sourceTarget as AnnotationLayer);
-
-    // if (this.annotationGroup.hasLayer(e.target)) {
-    //   this.setSelectedAnnotation(e.target as AnnotationLayer);
-    // } else {
-    //   this.setSelectedAnnotation(null);
-    // }
-
+    // Check if the event's target corresponds to an annotation layer
     const annotationLayers = this.annotationGroup.getLayers();
-    let selectedAnnotation : AnnotationLayer | null = null;
-    for (const layer of annotationLayers) {
-      const layerElement = (layer as any)._path || (layer as any)._icon;
-      if (layerElement && layerElement === e.originalEvent.target) {
-        console.log("🚀 ~ selectedAnnotation FOUND:")
-        // this.setSelectedAnnotation(e.target as AnnotationLayer);
-        this.setSelectedAnnotation(layer as AnnotationLayer);
-        selectedAnnotation = e.target;
-        return; // Stop the iteration once the layer is found
-      }
-    }
+    const selectedAnnotation = annotationLayers.find((layer: any) => {
+      const layerElement = layer._path || layer._icon;
+      return layerElement === e.originalEvent.target;
+    });
 
-    if (!selectedAnnotation) {
-      console.log("🚀 ~ selectedAnnotation NULL:")
+    if (selectedAnnotation) {
+      this.setSelectedAnnotation(selectedAnnotation as AnnotationLayer);
+    } else {
       this.setSelectedAnnotation(null);
     }
-
-    // this.isDragging = false;
-    // this.endPoint = e.containerPoint; // Use containerPoint for pixel coordinates
   }
   
   private handleMouseMove = (e: L.LeafletMouseEvent) => {
     // console.log("🚀 ~ handleMouseMove:", e)
-
-    // if (!this.isDragging || !this.startPoint || !this.lastPoint) {
-    //   return;
-    // }
-  
-  //   const offsetX = e.containerPoint.x - this.startPoint.x;
-  //   const offsetY = e.containerPoint.y - this.startPoint.y;
-  
-  //   const layers = this.annotationGroup.getLayers();
-  //   layers.forEach((layer: any) => {
-  //     if (layer instanceof L.Marker) {
-  //       const currentPoint = this.map.latLngToContainerPoint(layer.getLatLng());
-  //       const newPoint = currentPoint.add([offsetX, offsetY]);
-  //       const newLatLng = this.map.containerPointToLatLng(newPoint);
-  //       layer.setLatLng(newLatLng);
-  //     } else if (layer instanceof L.Polyline || layer instanceof L.Polygon) {
-  //       const latlngs = layer.getLatLngs() as L.LatLng[];
-  //       const newLatLngs = latlngs.map((latlng: L.LatLng) => {
-  //         const currentPoint = this.map.latLngToContainerPoint(latlng);
-  //         const newPoint = currentPoint.add([offsetX, offsetY]);
-  //         return this.map.containerPointToLatLng(newPoint);
-  //       });
-  //       layer.setLatLngs(newLatLngs);
-  //     }
-  //   });
-  
-  //   this.startPoint = e.containerPoint; // Update the startPoint for the next move
   }
   
 
   /* Handle event where mouse leaves map */
   private handleMouseOut = (e: L.LeafletMouseEvent) => {
     // console.log("🚀 ~ handleMouseOut:", e)
-
-    // if (!this.isClicked || !this.startPoint || !this.endPoint) {
-    //   return;
-    // }
-    // const layer = e.target;
-    // const nextX = e.originalEvent.clientX - this.startPoint[0] + this.endPoint[0];
-    // const nextY = e.originalEvent.clientY - this.startPoint[1] + this.endPoint[1];
-
-    // layer.setOptions({
-    //   center: [nextX, nextY]
-    // })
   }
 
   /* Handle event where mouse leaves map */
   // private handleContextMenu = (e: L.LeafletMouseEvent) => {
-
   //   // TODO
   // }
 
