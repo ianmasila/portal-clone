@@ -105,22 +105,22 @@ export const AttachAnnotationHandlers = (
   } 
 ): PolylineObjectType => {
   // Add right-click event listener to the layer
-  layer.on("contextmenu", (event: L.LeafletMouseEvent) => {
-    callbacks?.handleAnnotationRightClick?.(event, layer);
-  });
-  // Add left-click event listener to the layer
-  layer.on("click", (event: L.LeafletMouseEvent) => {
-    // TODO: Ensure click event is ignored if parent event was right click
-    if (event.type !== "contextmenu") {
-      callbacks?.handleAnnotationLeftClick?.(event, layer);
-    }
-  });
-  // Add listeners for edit events
-  if (layer.editing) {
-    layer.on('edit', (event: L.LeafletEvent) => {
-      callbacks?.handleAnnotationEdit?.(event, layer);
-    });
-  }
+  // layer.on("contextmenu", (event: L.LeafletMouseEvent) => {
+  //   callbacks?.handleAnnotationRightClick?.(event, layer);
+  // });
+  // // Add left-click event listener to the layer
+  // layer.on("click", (event: L.LeafletMouseEvent) => {
+  //   // TODO: Ensure click event is ignored if parent event was right click
+  //   if (event.type !== "contextmenu") {
+  //     callbacks?.handleAnnotationLeftClick?.(event, layer);
+  //   }
+  // });
+  // // Add listeners for edit events
+  // if (layer.editing) {
+  //   layer.on('edit', (event: L.LeafletEvent) => {
+  //     callbacks?.handleAnnotationEdit?.(event, layer);
+  //   });
+  // }
 
   /**
    * Obtain Annotation ID from Layer Attribution of AnnotationID is Undefined

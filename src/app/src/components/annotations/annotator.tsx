@@ -382,9 +382,6 @@ export default class Annotator extends Component<
     this.handleAnnotationOptionsMenuReset = this.handleAnnotationOptionsMenuReset.bind(
       this
     );
-    this.handleClick = this.handleClick.bind(
-      this
-    );
     this.handleAnnotationRightClick = this.handleAnnotationRightClick.bind(
       this
     );
@@ -416,10 +413,12 @@ export default class Annotator extends Component<
       this
     );
 
+    this.handleClick = this.handleClick.bind(this);
     this.handleMouseDown = this.handleMouseDown.bind(this);
-    // this.handleMouseUp = this.handleMouseUp.bind(this);
-    // this.handleMouseMove = this.handleMouseMove.bind(this);
-    // this.handleMouseOut = this.handleMouseOut.bind(this);
+    this.handleMouseUp = this.handleMouseUp.bind(this);
+    this.handleMouseMove = this.handleMouseMove.bind(this);
+    this.handleMouseOut = this.handleMouseOut.bind(this);
+    // this.handleContextMenu = this.handleContextMenu.bind(this);
   }
 
   async componentDidMount(): Promise<void> {
@@ -452,10 +451,12 @@ export default class Annotator extends Component<
     
 
     // Listen for dragging annotation layers
+    this.map.on("click", this.handleClick);
     this.map.on("mousedown", this.handleMouseDown);
-    // this.map.on("mouseup", this.handleMouseUp);
-    // this.map.on("mousemove", this.handleMouseMove);
-    // this.map.on("mouseout", this.handleMouseOut);
+    this.map.on("mouseup", this.handleMouseUp);
+    this.map.on("mousemove", this.handleMouseMove);
+    this.map.on("mouseout", this.handleMouseOut);
+    // this.map.on("contextmenu", this.handleContextMenu);
 
     // Add event listener for when a new shape is created
     this.map.on(L.Draw.Event.CREATED,  (e) => {
@@ -523,9 +524,26 @@ export default class Annotator extends Component<
     setTimeout(() => this.updateImage(), 200);
 
     /* Document listeners */
-    document.addEventListener('click', this.handleClick);
+    // document.addEventListener('click', this.handleClick);
   }
 
+  // /* Handle general click events */
+  // private handleClick(e: MouseEvent) {
+  //   // Check if the target is an annotation layer
+  //   let selectedAnnotation: AnnotationLayer | null = null;
+  //   const annotationLayers = this.annotationGroup.getLayers();
+  //   for (const layer of annotationLayers) {
+  //     const layerElement = (layer as any)._path || (layer as any)._icon;
+  //     if (layerElement && layerElement === e.target) {
+  //       selectedAnnotation = layer as AnnotationLayer;
+  //       return; // Stop the iteration once the layer is found
+  //     }
+  //   }
+
+  //   if (!selectedAnnotation) {
+  //     this.setSelectedAnnotation(null);
+  //   }
+  // }
 
 
   // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
@@ -598,26 +616,17 @@ export default class Annotator extends Component<
       );
     }
 
-    document.removeEventListener('click', this.handleClick);
+    this.map.off("click", this.handleClick);
+    this.map.off("mousedown", this.handleMouseDown);
+    this.map.off("mouseup", this.handleMouseUp);
+    this.map.off("mousemove", this.handleMouseMove);
+    this.map.off("mouseout", this.handleMouseOut);
+    // this.map.off("contextmenu", this.handleContextMenu);
+
+    // document.removeEventListener('click', this.handleClick);
   }
 
-  /* Handle general click events */
-  private handleClick(e: MouseEvent) {
-    // Check if the target is an annotation layer
-    let selectedAnnotation: AnnotationLayer | null = null;
-    const annotationLayers = this.annotationGroup.getLayers();
-    for (const layer of annotationLayers) {
-      const layerElement = (layer as any)._path || (layer as any)._icon;
-      if (layerElement && layerElement === e.target) {
-        selectedAnnotation = layer as AnnotationLayer;
-        return; // Stop the iteration once the layer is found
-      }
-    }
 
-    if (!selectedAnnotation) {
-      this.setSelectedAnnotation(null);
-    }
-  }
 
   private handlePlayPauseVideoOverlay() {
     const videoElement = this.videoOverlay?.getElement();
@@ -752,16 +761,18 @@ export default class Annotator extends Component<
         if (prevAnnotation) {
           prevAnnotation.options.fillOpacity = 0.35;
           prevAnnotation.editing.disable();
+          // prevAnnotation.dragging.disable();
           prevAnnotation.fire("mouseout");
         }
         if (annotation) {
           annotation.options.fillOpacity = 0.7;
-          annotation.editing.enable();
-          const centroid = (annotation as L.Layer as PolylineObjectType).getCenter();
-          // Convert latlng to pixel coordinates on viewport
-          const containerPoint = this.map.latLngToContainerPoint(centroid);
-          this.startPoint = [containerPoint.x, containerPoint.y];
-          this.endPoint = [containerPoint.x, containerPoint.y];
+          annotation.editing?.enable();
+          // annotation.dragging.enable();
+          // const centroid = (annotation as L.Layer as PolylineObjectType).getCenter();
+          // // Convert latlng to pixel coordinates on viewport
+          // const containerPoint = this.map.latLngToContainerPoint(centroid);
+          // this.startPoint = [containerPoint.x, containerPoint.y];
+          // this.endPoint = [containerPoint.x, containerPoint.y];
         }
         /* Update selected annotation on menubar */
         if (this.menubarRef.current !== null) {
@@ -1266,10 +1277,34 @@ export default class Annotator extends Component<
     });
   };
 
+  /* Handle general click events */
+  private handleClick(e: L.LeafletMouseEvent) {
+    // console.log("🚀 ~ handleClick ~ e:", e)
+    // Check if the target is an annotation layer
+    let selectedAnnotation: AnnotationLayer | null = null;
+    const annotationLayers = this.annotationGroup.getLayers();
+    for (const layer of annotationLayers) {
+      const layerElement = (layer as any)._path || (layer as any)._icon;
+      if (layerElement && layerElement === e.originalEvent.target) {
+        selectedAnnotation = layer as AnnotationLayer;
+        this.setSelectedAnnotation(e.target as AnnotationLayer);
+        return; // Stop the iteration once the layer is found
+      }
+    }
+
+    if (!selectedAnnotation) {
+      this.setSelectedAnnotation(null);
+    }
+  }
+
   private handleMouseDown = (e: L.LeafletMouseEvent) => {
-    console.log('map mousedown', e);
-    const containerPoint = e.containerPoint;
-    console.log("🚀 ~ containerPoint:", containerPoint)
+    // console.log("🚀 ~ handleMouseDown e:", e)
+    // console.log("🚀 ~ mouse down e:", e)
+    // console.log('map mousedown', e);
+    // const layer = e.propagatedFrom;
+    
+    // const containerPoint = e.containerPoint;
+    // console.log("🚀 ~ containerPoint:", containerPoint)
     // this.isDragging = true;
     // this.startPoint = e.containerPoint; // Use containerPoint for pixel coordinates
   
@@ -1285,16 +1320,47 @@ export default class Annotator extends Component<
     // });
   }
   
-  // private handleMouseUp = (e: L.LeafletMouseEvent) => {
-  //   console.log('map mouseup', e);
-  //   this.isDragging = false;
-  //   this.endPoint = e.containerPoint; // Use containerPoint for pixel coordinates
-  // }
+  private handleMouseUp = (e: L.LeafletMouseEvent) => {
+    console.log("🚀 ~ handleMouseUp:", e)
+
+    /* Select annotation */ 
+
+    // this.setSelectedAnnotation(e.sourceTarget as AnnotationLayer);
+
+    // if (this.annotationGroup.hasLayer(e.target)) {
+    //   this.setSelectedAnnotation(e.target as AnnotationLayer);
+    // } else {
+    //   this.setSelectedAnnotation(null);
+    // }
+
+    const annotationLayers = this.annotationGroup.getLayers();
+    let selectedAnnotation : AnnotationLayer | null = null;
+    for (const layer of annotationLayers) {
+      const layerElement = (layer as any)._path || (layer as any)._icon;
+      if (layerElement && layerElement === e.originalEvent.target) {
+        console.log("🚀 ~ selectedAnnotation FOUND:")
+        // this.setSelectedAnnotation(e.target as AnnotationLayer);
+        this.setSelectedAnnotation(layer as AnnotationLayer);
+        selectedAnnotation = e.target;
+        return; // Stop the iteration once the layer is found
+      }
+    }
+
+    if (!selectedAnnotation) {
+      console.log("🚀 ~ selectedAnnotation NULL:")
+      this.setSelectedAnnotation(null);
+    }
+
+    // this.isDragging = false;
+    // this.endPoint = e.containerPoint; // Use containerPoint for pixel coordinates
+  }
   
-  // private handleMouseMove = (e: L.LeafletMouseEvent) => {
-  //   if (!this.isDragging || !this.startPoint || !this.lastPoint) {
-  //     return;
-  //   }
+  private handleMouseMove = (e: L.LeafletMouseEvent) => {
+    // console.log("🚀 ~ handleMouseMove:", e)
+
+    // if (!this.isDragging || !this.startPoint || !this.lastPoint) {
+    //   return;
+    // }
   
   //   const offsetX = e.containerPoint.x - this.startPoint.x;
   //   const offsetY = e.containerPoint.y - this.startPoint.y;
@@ -1318,21 +1384,29 @@ export default class Annotator extends Component<
   //   });
   
   //   this.startPoint = e.containerPoint; // Update the startPoint for the next move
-  // }
+  }
   
 
-  // /* Handle event where mouse leaves map */
-  // private handleMouseOut = (e: L.LeafletMouseEvent) => {
-  //   if (!this.isClicked || !this.startPoint || !this.endPoint) {
-  //     return;
-  //   }
-  //   const layer = e.target;
-  //   const nextX = e.originalEvent.clientX - this.startPoint[0] + this.endPoint[0];
-  //   const nextY = e.originalEvent.clientY - this.startPoint[1] + this.endPoint[1];
+  /* Handle event where mouse leaves map */
+  private handleMouseOut = (e: L.LeafletMouseEvent) => {
+    // console.log("🚀 ~ handleMouseOut:", e)
 
-  //   layer.setOptions({
-  //     center: [nextX, nextY]
-  //   })
+    // if (!this.isClicked || !this.startPoint || !this.endPoint) {
+    //   return;
+    // }
+    // const layer = e.target;
+    // const nextX = e.originalEvent.clientX - this.startPoint[0] + this.endPoint[0];
+    // const nextY = e.originalEvent.clientY - this.startPoint[1] + this.endPoint[1];
+
+    // layer.setOptions({
+    //   center: [nextX, nextY]
+    // })
+  }
+
+  /* Handle event where mouse leaves map */
+  // private handleContextMenu = (e: L.LeafletMouseEvent) => {
+
+  //   // TODO
   // }
 
   /* Handle right click events on annotations */
