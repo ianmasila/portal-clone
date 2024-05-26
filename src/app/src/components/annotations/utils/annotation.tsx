@@ -17,6 +17,10 @@ import { AssetAPIObject } from "@portal/api/annotation";
 import { AnnotationLayer, PolylineObjectType } from "@portal/components/annotations/types";
 import { blendHexColors } from "@portal/utils/index";
 
+export const isPolylineObjectType = (layer: any): layer is PolylineObjectType => {
+  return layer instanceof L.Polyline || layer instanceof L.Rectangle || layer instanceof L.Polygon;
+}
+
 /**
  * Get Direct Annotation Color by TagID
  */

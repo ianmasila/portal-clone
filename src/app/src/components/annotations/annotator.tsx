@@ -442,12 +442,11 @@ export default class Annotator extends Component<
       attributionControl: false,
       zoomControl: false,
       doubleClickZoom: false,
-      // drawControl: true,
-      drawControlTooltips: true,
     }).setView(Coordinate(5000, 5000), 0);
 
     this.annotationGroup.addTo(this.map);
-    this.drawControl.addTo(this.map);
+    // this.drawControl.addTo(this.map);
+    this.map.addControl(this.drawControl);
     
 
     // Listen for dragging annotation layers
@@ -459,42 +458,47 @@ export default class Annotator extends Component<
     // this.map.on("contextmenu", this.handleContextMenu);
 
     // Add event listener for when a new shape is created
-    this.map.on(L.Draw.Event.CREATED,  (e) => {
-      console.log("🚀 ~ this.map.on draw created ~ e:", e)
-      const layer = e.layer;
-      const layerWithListeners = AttachAnnotationHandlers(
-        this.map, 
-        this.annotationGroup, 
-        layer,
-        this.project, 
-        (layer.options as any).annotationID, 
-        this.annotationCallbacks,
-      );
-      this.drawnFeatures.addLayer(layerWithListeners);
-      this.annotationGroup.addLayer(layerWithListeners);
-    });
+    // this.map.on(L.Draw.Event.CREATED,  (e) => {
+    //   console.log("🚀 ~ this.map.on draw created ~ e:", e)
+    //   const layer = e.layer;
+    //   const layerWithListeners = AttachAnnotationHandlers(
+    //     this.map, 
+    //     this.annotationGroup, 
+    //     layer,
+    //     this.project, 
+    //     (layer.options as any).annotationID, 
+    //     this.annotationCallbacks,
+    //   );
+    //   this.drawnFeatures.addLayer(layerWithListeners);
+    //   this.annotationGroup.addLayer(layerWithListeners);
+    // });
 
-    this.map.on(L.Draw.Event.EDITED,  (e) => {
+    // @ts-ignore
+    this.map.on(L.Draw.Event.EDITED,  (e: L.DrawEvents.Edited) => {
       console.log("🚀 ~ this.map.on draw edited ~ e:", e)
-      const layer = e.layer;
-      const polyLayer = layer as PolylineObjectType;
-      console.log("🚀 ~ this.map.on ~ polyLayer:", polyLayer)
-      // const layerWithListeners = AttachAnnotationHandlers(
-      //   this.map, 
-      //   this.annotationGroup, 
-      //   layer,
-      //   this.project, 
-      //   (layer.options as any).annotationID, 
-      //   this.annotationCallbacks,
-      // );
-      console.log("🚀 ~ this.map.on ~ currentAssetAnnotations len:", this.state.currentAssetAnnotations.length)
+      // Assumption: We can only edit one layer at a time
+      const layers = e.layers;
+      layers.eachLayer(layer => {
+        this.setSelectedAnnotation(layer as AnnotationLayer);
+        // const polyLayer = layer as PolylineObjectType;
+        // console.log("🚀 ~ this.map.on ~ polyLayer:", polyLayer)
+        // // const layerWithListeners = AttachAnnotationHandlers(
+        // //   this.map, 
+        // //   this.annotationGroup, 
+        // //   layer,
+        // //   this.project, 
+        // //   (layer.options as any).annotationID, 
+        // //   this.annotationCallbacks,
+        // // );
+        // console.log("🚀 ~ this.map.on ~ currentAssetAnnotations len:", this.state.currentAssetAnnotations.length)
 
-      const newAssetAnnotations = (this.state.currentAssetAnnotations as PolylineObjectType[]).slice().filter(annotation => 
-        annotation !== layer as PolylineObjectType);
-      console.log("🚀 ~ this.map.on ~ NEW currentAssetAnnotations len:", newAssetAnnotations.length)
-      
-      newAssetAnnotations.push(layer as PolylineObjectType);
-      this.updateCurrentAssetAnnotations(newAssetAnnotations);
+        // const newAssetAnnotations = (this.state.currentAssetAnnotations as PolylineObjectType[]).slice().filter(annotation => 
+        //   annotation !== layer as PolylineObjectType);
+        // console.log("🚀 ~ this.map.on ~ NEW currentAssetAnnotations len:", newAssetAnnotations.length)
+        
+        // newAssetAnnotations.push(layer as PolylineObjectType);
+        // this.updateCurrentAssetAnnotations(newAssetAnnotations);
+      });
     });
 
     this.map.on("mouseup", () => {
@@ -761,13 +765,11 @@ export default class Annotator extends Component<
         if (prevAnnotation) {
           prevAnnotation.options.fillOpacity = 0.35;
           prevAnnotation.editing.disable();
-          // prevAnnotation.dragging.disable();
           prevAnnotation.fire("mouseout");
         }
         if (annotation) {
           annotation.options.fillOpacity = 0.7;
           annotation.editing?.enable();
-          // annotation.dragging.enable();
           // const centroid = (annotation as L.Layer as PolylineObjectType).getCenter();
           // // Convert latlng to pixel coordinates on viewport
           // const containerPoint = this.map.latLngToContainerPoint(centroid);
@@ -1322,7 +1324,6 @@ export default class Annotator extends Component<
   
   private handleMouseUp = (e: L.LeafletMouseEvent) => {
     /* Select annotation */ 
-    // Check if the event's target corresponds to an annotation layer
     const annotationLayers = this.annotationGroup.getLayers();
     const selectedAnnotation = annotationLayers.find((layer: any) => {
       const layerElement = layer._path || layer._icon;
@@ -1334,6 +1335,14 @@ export default class Annotator extends Component<
     } else {
       this.setSelectedAnnotation(null);
     }
+
+    // TODO: Fix this more concise way
+    // const layer = e.target;
+    // if (layer instanceof L.Marker || isPolylineObjectType(layer)) {
+    //   this.setSelectedAnnotation(layer as L.Layer as AnnotationLayer);
+    // } else {
+    //   this.setSelectedAnnotation(null);
+    // }
   }
   
   private handleMouseMove = (e: L.LeafletMouseEvent) => {
