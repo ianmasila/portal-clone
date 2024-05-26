@@ -236,7 +236,6 @@ export default class Annotator extends Component<
   private annotationCallbacks: { 
     handleAnnotationRightClick: any; 
     handleAnnotationLeftClick: any, 
-    handleAnnotationEdit: any 
   };
 
   /* Mouse activity */
@@ -339,7 +338,6 @@ export default class Annotator extends Component<
     this.annotationCallbacks = {
       handleAnnotationRightClick: this.handleAnnotationRightClick,
       handleAnnotationLeftClick: this.handleAnnotationLeftClick,
-      handleAnnotationEdit: this.handleAnnotationEdit,
     };
 
     this.selectAsset = this.selectAsset.bind(this);
@@ -388,9 +386,6 @@ export default class Annotator extends Component<
     this.handleAnnotationLeftClick = this.handleAnnotationLeftClick.bind(
       this
     );
-    this.handleAnnotationEdit = this.handleAnnotationEdit.bind(
-      this
-    );
     this.handlePlayPauseVideoOverlay = this.handlePlayPauseVideoOverlay.bind(
       this
     );
@@ -419,6 +414,9 @@ export default class Annotator extends Component<
     this.handleMouseMove = this.handleMouseMove.bind(this);
     this.handleMouseOut = this.handleMouseOut.bind(this);
     // this.handleContextMenu = this.handleContextMenu.bind(this);
+    this.handleEditResize = this.handleEditResize.bind(this);
+    this.handleEditVertex = this.handleEditVertex.bind(this);
+    this.handleEditMove = this.handleEditMove.bind(this);
   }
 
   async componentDidMount(): Promise<void> {
@@ -447,6 +445,11 @@ export default class Annotator extends Component<
     this.annotationGroup.addTo(this.map);
     // this.drawControl.addTo(this.map);
     this.map.addControl(this.drawControl);
+
+    this.map.on(L.Draw.Event.EDITRESIZE, this.handleEditResize);
+    this.map.on(L.Draw.Event.EDITVERTEX, this.handleEditVertex);
+    this.map.on(L.Draw.Event.EDITMOVE, this.handleEditMove);
+
     
 
     // Listen for dragging annotation layers
@@ -473,33 +476,7 @@ export default class Annotator extends Component<
     //   this.annotationGroup.addLayer(layerWithListeners);
     // });
 
-    // @ts-ignore
-    this.map.on(L.Draw.Event.EDITED,  (e: L.DrawEvents.Edited) => {
-      console.log("🚀 ~ this.map.on draw edited ~ e:", e)
-      // Assumption: We can only edit one layer at a time
-      const layers = e.layers;
-      layers.eachLayer(layer => {
-        this.setSelectedAnnotation(layer as AnnotationLayer);
-        // const polyLayer = layer as PolylineObjectType;
-        // console.log("🚀 ~ this.map.on ~ polyLayer:", polyLayer)
-        // // const layerWithListeners = AttachAnnotationHandlers(
-        // //   this.map, 
-        // //   this.annotationGroup, 
-        // //   layer,
-        // //   this.project, 
-        // //   (layer.options as any).annotationID, 
-        // //   this.annotationCallbacks,
-        // // );
-        // console.log("🚀 ~ this.map.on ~ currentAssetAnnotations len:", this.state.currentAssetAnnotations.length)
-
-        // const newAssetAnnotations = (this.state.currentAssetAnnotations as PolylineObjectType[]).slice().filter(annotation => 
-        //   annotation !== layer as PolylineObjectType);
-        // console.log("🚀 ~ this.map.on ~ NEW currentAssetAnnotations len:", newAssetAnnotations.length)
-        
-        // newAssetAnnotations.push(layer as PolylineObjectType);
-        // this.updateCurrentAssetAnnotations(newAssetAnnotations);
-      });
-    });
+   
 
     this.map.on("mouseup", () => {
       if (this.videoOverlay) {
@@ -624,8 +601,11 @@ export default class Annotator extends Component<
     this.map.off("mousedown", this.handleMouseDown);
     this.map.off("mouseup", this.handleMouseUp);
     this.map.off("mousemove", this.handleMouseMove);
-    this.map.off("mouseout", this.handleMouseOut);
+    this.map.off("mouseout", this.handleMouseUp);
     // this.map.off("contextmenu", this.handleContextMenu);
+    this.map.off(L.Draw.Event.EDITRESIZE, this.handleEditResize);
+    this.map.off(L.Draw.Event.EDITVERTEX, this.handleEditVertex);
+    this.map.off(L.Draw.Event.EDITMOVE, this.handleEditMove);
 
     // document.removeEventListener('click', this.handleClick);
   }
@@ -1279,6 +1259,64 @@ export default class Annotator extends Component<
     });
   };
 
+  /**
+   * @param e Layer that was just resized.  
+   * Triggered as the user resizes a rectangle or circle.
+   * This method is called repeatedly as the user resizes the layer. 
+   * FIXME: Only call this function once the user releases the mouse
+   */
+  private handleEditResize = (e: any) => {
+    console.log("🚀 ~ handleEditResize e:", e);
+    // Assumption: We can only edit one layer at a time
+    // this.setSelectedAnnotation(e.layer);
+    // console.log("🚀 ~ AssetAnnotations:", this.state.currentAssetAnnotations.length);
+    // const newAssetAnnotations = (this.state.currentAssetAnnotations).slice().filter((annotation: any) => 
+    //   annotation !== event.sourceTarget);
+    // console.log("🚀 ~ newAssetAnnotations:", newAssetAnnotations.length)
+    // newAssetAnnotations.push(event.target as PolylineObjectType);
+
+    // this.updateCurrentAssetAnnotations(newAssetAnnotations);
+  };
+
+
+  /**
+   * @param e List of all layers just being edited from the map. 
+   * Triggered when a vertex is edited on a polyline or polygon.
+   */
+  private handleEditVertex = (e: any) => {
+    console.log("🚀 ~ handleEditVertex e:", e);
+    // Assumption: We can only edit one layer at a time
+    // e.layers.eachLayer(layer => {
+    //   this.setSelectedAnnotation(e.layer);
+    // })
+    // this.setSelectedAnnotation(e.layer);
+    // console.log("🚀 ~ AssetAnnotations:", this.state.currentAssetAnnotations.length);
+    // const newAssetAnnotations = (this.state.currentAssetAnnotations).slice().filter((annotation: any) => 
+    //   annotation !== event.sourceTarget);
+    // console.log("🚀 ~ newAssetAnnotations:", newAssetAnnotations.length)
+    // newAssetAnnotations.push(event.target as PolylineObjectType);
+
+    // this.updateCurrentAssetAnnotations(newAssetAnnotations);
+  };
+
+
+  /**
+   * @param e Event with Layer that was just moved. 
+   * Triggered as the user moves a rectangle; circle or marker.
+   */
+  private handleEditMove = (e: any) => {
+    console.log("🚀 ~ handleEditMove e:", e);
+    // Assumption: We can only edit one layer at a time
+    // this.setSelectedAnnotation(e.layer);
+    // console.log("🚀 ~ AssetAnnotations:", this.state.currentAssetAnnotations.length);
+    // const newAssetAnnotations = (this.state.currentAssetAnnotations).slice().filter((annotation: any) => 
+    //   annotation !== event.sourceTarget);
+    // console.log("🚀 ~ newAssetAnnotations:", newAssetAnnotations.length)
+    // newAssetAnnotations.push(event.target as PolylineObjectType);
+
+    // this.updateCurrentAssetAnnotations(newAssetAnnotations);
+  };
+
   /* Handle general click events */
   private handleClick(e: L.LeafletMouseEvent) {
     // console.log("🚀 ~ handleClick ~ e:", e)
@@ -1399,22 +1437,6 @@ export default class Annotator extends Component<
         }
       })
     }
-  };
-
-
-
-
-
-  // FIXME
-  /* Handle left click events on annotations */
-  private handleAnnotationEdit = (event: L.LeafletEvent, annotation: AnnotationLayer) => {
-    console.log("🚀 ~ AssetAnnotations:", this.state.currentAssetAnnotations.length);
-    const newAssetAnnotations = (this.state.currentAssetAnnotations).slice().filter((annotation: any) => 
-      annotation !== event.sourceTarget);
-    console.log("🚀 ~ newAssetAnnotations:", newAssetAnnotations.length)
-    newAssetAnnotations.push(event.target as PolylineObjectType);
-
-    this.updateCurrentAssetAnnotations(newAssetAnnotations);
   };
 
   /* For now, we only support `intersect` */
