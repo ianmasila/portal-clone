@@ -24,6 +24,7 @@ import {
   RenderAssetAnnotations,
   GetAnnotationIntersection,
   AttachAnnotationHandlers,
+  isPolylineObjectType,
 } from "@portal/components/annotations/utils/annotation";
 
 import {
@@ -449,7 +450,6 @@ export default class Annotator extends Component<
     this.map.on(L.Draw.Event.EDITRESIZE, this.handleEditResize);
     this.map.on(L.Draw.Event.EDITVERTEX, this.handleEditVertex);
     this.map.on(L.Draw.Event.EDITMOVE, this.handleEditMove);
-
     
 
     // Listen for dragging annotation layers
@@ -457,7 +457,7 @@ export default class Annotator extends Component<
     this.map.on("mousedown", this.handleMouseDown);
     this.map.on("mouseup", this.handleMouseUp);
     this.map.on("mousemove", this.handleMouseMove);
-    this.map.on("mouseout", this.handleMouseOut);
+    this.map.on("mouseout", this.handleMouseUp);
     // this.map.on("contextmenu", this.handleContextMenu);
 
     // Add event listener for when a new shape is created
@@ -739,6 +739,7 @@ export default class Annotator extends Component<
    * @param annotation - annotation layer to be selected
    */
   public setSelectedAnnotation(annotation: AnnotationLayer | null): void {
+    console.log("🚀 ~ setSelectedAnnotation ~ setSelectedAnnotation:")
     this.setState(
       prevState => {
         const prevAnnotation = prevState.selectedAnnotation;
@@ -762,7 +763,7 @@ export default class Annotator extends Component<
         }
 
         return { selectedAnnotation: annotation };
-      },
+      }
     )
   }
 
@@ -1361,16 +1362,39 @@ export default class Annotator extends Component<
   }
   
   private handleMouseUp = (e: L.LeafletMouseEvent) => {
+    console.log("🚀 ~ handleMouseUp:", e)
+    // TODO: If the click is within a small distance from any annotation, select that annotation
     /* Select annotation */ 
+    // const annotationLayers = this.annotationGroup.getLayers();
+    // const selectedAnnotation = annotationLayers.find((layer: any) => {
+    //   const layerElement = layer._path || layer._icon;
+    //   return layerElement === e.originalEvent.target;
+    // });
+
+    const clickPoint = e.containerPoint;
+    const threshold = 10; // Define a small distance threshold in pixels
+
+    /* Select annotation */
     const annotationLayers = this.annotationGroup.getLayers();
-    const selectedAnnotation = annotationLayers.find((layer: any) => {
+    let selectedAnnotation: AnnotationLayer | null = null;
+    annotationLayers.forEach((layer: any) => {
       const layerElement = layer._path || layer._icon;
-      return layerElement === e.originalEvent.target;
+      if (layerElement === e.originalEvent.target) {
+        selectedAnnotation = layer;
+      } else if (isPolylineObjectType(layer)) {
+        const layerPoint = this.map.latLngToContainerPoint(layer.getLatLngs() ? layer.getLatLngs() : layer.getCenter());
+        const distance = layerPoint.distanceTo(clickPoint);
+        if (distance < threshold) {
+          selectedAnnotation = layer as L.Layer as AnnotationLayer;
+        }
+      }
     });
 
     if (selectedAnnotation) {
+      console.log('yes')
       this.setSelectedAnnotation(selectedAnnotation as AnnotationLayer);
     } else {
+      console.log('no')
       this.setSelectedAnnotation(null);
     }
 
