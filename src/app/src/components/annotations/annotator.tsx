@@ -58,7 +58,6 @@ import { RegisteredModel } from "./model";
 
 import AnnotationOptionsMenu from "./annotationoptionsmenu";
 import { AlertContent } from "@portal/constants/annotation";
-import { useOnClickOutside } from "../../hooks/useOnClickOutside";
 
 type Point = [number, number];
 type MapType = L.DrawMap;
@@ -198,6 +197,9 @@ export default class Annotator extends Component<
   private drawnFeatures: L.FeatureGroup;
   public drawControl: L.Control.Draw;
 
+  /* Annotator ref */
+  private annotatorRef: React.RefObject<Annotator>;
+
   /* Project Properties */
   private project: string;
 
@@ -236,6 +238,11 @@ export default class Annotator extends Component<
     handleAnnotationLeftClick: any, 
     handleAnnotationEdit: any 
   };
+
+  /* Mouse activity */
+  public isClicked: boolean;
+  public startPoint: Point | null;
+  public endPoint: Point | null;
 
   constructor(props: AnnotatorProps) {
     super(props);
@@ -323,6 +330,12 @@ export default class Annotator extends Component<
     this.imagebarRef = React.createRef();
     this.backgroundImg = null;
 
+    this.annotatorRef = React.createRef();
+    /* Mouse variables */
+    this.isClicked = false;
+    this.startPoint = null;
+    this.endPoint = null;
+
     this.annotationCallbacks = {
       handleAnnotationRightClick: this.handleAnnotationRightClick,
       handleAnnotationLeftClick: this.handleAnnotationLeftClick,
@@ -402,6 +415,11 @@ export default class Annotator extends Component<
     this.intersectAnnotations = this.intersectAnnotations.bind(
       this
     );
+
+    this.handleMouseDown = this.handleMouseDown.bind(this);
+    // this.handleMouseUp = this.handleMouseUp.bind(this);
+    // this.handleMouseMove = this.handleMouseMove.bind(this);
+    // this.handleMouseOut = this.handleMouseOut.bind(this);
   }
 
   async componentDidMount(): Promise<void> {
@@ -432,6 +450,12 @@ export default class Annotator extends Component<
     this.annotationGroup.addTo(this.map);
     this.drawControl.addTo(this.map);
     
+
+    // Listen for dragging annotation layers
+    this.map.on("mousedown", this.handleMouseDown);
+    // this.map.on("mouseup", this.handleMouseUp);
+    // this.map.on("mousemove", this.handleMouseMove);
+    // this.map.on("mouseout", this.handleMouseOut);
 
     // Add event listener for when a new shape is created
     this.map.on(L.Draw.Event.CREATED,  (e) => {
@@ -717,8 +741,6 @@ export default class Annotator extends Component<
     );
   }
 
-
-  // WHY RENDER IS BEHIND???
   /**
    * Set selected annotation to new annotation
    * @param annotation - annotation layer to be selected
@@ -735,8 +757,12 @@ export default class Annotator extends Component<
         if (annotation) {
           annotation.options.fillOpacity = 0.7;
           annotation.editing.enable();
+          const centroid = (annotation as L.Layer as PolylineObjectType).getCenter();
+          // Convert latlng to pixel coordinates on viewport
+          const containerPoint = this.map.latLngToContainerPoint(centroid);
+          this.startPoint = [containerPoint.x, containerPoint.y];
+          this.endPoint = [containerPoint.x, containerPoint.y];
         }
-
         /* Update selected annotation on menubar */
         if (this.menubarRef.current !== null) {
           this.menubarRef.current.setSelectedAnnotation(annotation);
@@ -1240,6 +1266,75 @@ export default class Annotator extends Component<
     });
   };
 
+  private handleMouseDown = (e: L.LeafletMouseEvent) => {
+    console.log('map mousedown', e);
+    const containerPoint = e.containerPoint;
+    console.log("🚀 ~ containerPoint:", containerPoint)
+    // this.isDragging = true;
+    // this.startPoint = e.containerPoint; // Use containerPoint for pixel coordinates
+  
+    // // Calculate the centroid for each layer and use it as the lastPoint
+    // const layers = this.annotationGroup.getLayers();
+    // layers.forEach((layer: any) => {
+    //   if (layer instanceof L.Marker) {
+    //     this.lastPoint = this.map.latLngToContainerPoint(layer.getLatLng());
+    //   } else if (layer instanceof L.Polyline || layer instanceof L.Polygon) {
+    //     const centroid = layer.getCenter();
+    //     this.lastPoint = this.map.latLngToContainerPoint(centroid);
+    //   }
+    // });
+  }
+  
+  // private handleMouseUp = (e: L.LeafletMouseEvent) => {
+  //   console.log('map mouseup', e);
+  //   this.isDragging = false;
+  //   this.endPoint = e.containerPoint; // Use containerPoint for pixel coordinates
+  // }
+  
+  // private handleMouseMove = (e: L.LeafletMouseEvent) => {
+  //   if (!this.isDragging || !this.startPoint || !this.lastPoint) {
+  //     return;
+  //   }
+  
+  //   const offsetX = e.containerPoint.x - this.startPoint.x;
+  //   const offsetY = e.containerPoint.y - this.startPoint.y;
+  
+  //   const layers = this.annotationGroup.getLayers();
+  //   layers.forEach((layer: any) => {
+  //     if (layer instanceof L.Marker) {
+  //       const currentPoint = this.map.latLngToContainerPoint(layer.getLatLng());
+  //       const newPoint = currentPoint.add([offsetX, offsetY]);
+  //       const newLatLng = this.map.containerPointToLatLng(newPoint);
+  //       layer.setLatLng(newLatLng);
+  //     } else if (layer instanceof L.Polyline || layer instanceof L.Polygon) {
+  //       const latlngs = layer.getLatLngs() as L.LatLng[];
+  //       const newLatLngs = latlngs.map((latlng: L.LatLng) => {
+  //         const currentPoint = this.map.latLngToContainerPoint(latlng);
+  //         const newPoint = currentPoint.add([offsetX, offsetY]);
+  //         return this.map.containerPointToLatLng(newPoint);
+  //       });
+  //       layer.setLatLngs(newLatLngs);
+  //     }
+  //   });
+  
+  //   this.startPoint = e.containerPoint; // Update the startPoint for the next move
+  // }
+  
+
+  // /* Handle event where mouse leaves map */
+  // private handleMouseOut = (e: L.LeafletMouseEvent) => {
+  //   if (!this.isClicked || !this.startPoint || !this.endPoint) {
+  //     return;
+  //   }
+  //   const layer = e.target;
+  //   const nextX = e.originalEvent.clientX - this.startPoint[0] + this.endPoint[0];
+  //   const nextY = e.originalEvent.clientY - this.startPoint[1] + this.endPoint[1];
+
+  //   layer.setOptions({
+  //     center: [nextX, nextY]
+  //   })
+  // }
+
   /* Handle right click events on annotations */
   private handleAnnotationRightClick = (event: L.LeafletMouseEvent, annotation: AnnotationLayer) => {
     event.originalEvent.preventDefault();
@@ -1281,6 +1376,11 @@ export default class Annotator extends Component<
     }
   };
 
+
+
+
+
+  // FIXME
   /* Handle left click events on annotations */
   private handleAnnotationEdit = (event: L.LeafletEvent, annotation: AnnotationLayer) => {
     console.log("🚀 ~ AssetAnnotations:", this.state.currentAssetAnnotations.length);
