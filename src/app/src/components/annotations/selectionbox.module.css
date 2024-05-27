@@ -1,0 +1,9 @@
+/* SelectionBox.css */
+.selectionBox {
+    border: 2px dashed #00f;
+    /* Light blue border */
+    background-color: rgba(173, 216, 230, 0.5);
+    /* Light blue background */
+    position: absolute;
+    pointer-events: none;
+}

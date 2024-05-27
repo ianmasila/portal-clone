@@ -24,7 +24,6 @@ import {
   RenderAssetAnnotations,
   GetAnnotationIntersection,
   AttachAnnotationHandlers,
-  isPolylineObjectType,
 } from "@portal/components/annotations/utils/annotation";
 
 import {
@@ -45,7 +44,7 @@ import {
   APIGetPredictionProgress,
 } from "@portal/api/annotation";
 
-import { invert, cloneDeep, isEmpty } from "lodash";
+import { invert, cloneDeep, isEmpty, throttle } from "lodash";
 
 import { CreateGenericToast } from "@portal/utils/ui/toasts";
 import AnnotatorInstanceSingleton from "./utils/annotator.singleton";
@@ -59,6 +58,7 @@ import { RegisteredModel } from "./model";
 
 import AnnotationOptionsMenu from "./annotationoptionsmenu";
 import { AlertContent } from "@portal/constants/annotation";
+import { AnnotationAction } from "@portal/components/annotations/enums";
 
 type Point = [number, number];
 type MapType = L.DrawMap;
@@ -243,6 +243,8 @@ export default class Annotator extends Component<
   public isClicked: boolean;
   public startPoint: Point | null;
   public endPoint: Point | null;
+  public annotationAction: AnnotationAction;
+
 
   constructor(props: AnnotatorProps) {
     super(props);
@@ -335,6 +337,7 @@ export default class Annotator extends Component<
     this.isClicked = false;
     this.startPoint = null;
     this.endPoint = null;
+    this.annotationAction = AnnotationAction.UNDETERMINED;
 
     this.annotationCallbacks = {
       handleAnnotationRightClick: this.handleAnnotationRightClick,
@@ -415,9 +418,9 @@ export default class Annotator extends Component<
     this.handleMouseMove = this.handleMouseMove.bind(this);
     this.handleMouseOut = this.handleMouseOut.bind(this);
     // this.handleContextMenu = this.handleContextMenu.bind(this);
-    this.handleEditResize = this.handleEditResize.bind(this);
+    this.handleEditResize = throttle(this.handleEditResize, 1000).bind(this);
     this.handleEditVertex = this.handleEditVertex.bind(this);
-    this.handleEditMove = this.handleEditMove.bind(this);
+    this.handleEditMove = throttle(this.handleEditMove, 1000).bind(this);
   }
 
   async componentDidMount(): Promise<void> {
@@ -1263,22 +1266,12 @@ export default class Annotator extends Component<
   /**
    * @param e Layer that was just resized.  
    * Triggered as the user resizes a rectangle or circle.
-   * This method is called repeatedly as the user resizes the layer. 
-   * FIXME: Only call this function once the user releases the mouse
+   * This method is called repeatedly as the user resizes the layer so we have throttled it to 1000ms. 
    */
   private handleEditResize = (e: any) => {
     console.log("🚀 ~ handleEditResize e:", e);
-    // Assumption: We can only edit one layer at a time
-    // this.setSelectedAnnotation(e.layer);
-    // console.log("🚀 ~ AssetAnnotations:", this.state.currentAssetAnnotations.length);
-    // const newAssetAnnotations = (this.state.currentAssetAnnotations).slice().filter((annotation: any) => 
-    //   annotation !== event.sourceTarget);
-    // console.log("🚀 ~ newAssetAnnotations:", newAssetAnnotations.length)
-    // newAssetAnnotations.push(event.target as PolylineObjectType);
-
-    // this.updateCurrentAssetAnnotations(newAssetAnnotations);
+    this.annotationAction = AnnotationAction.EDIT;
   };
-
 
   /**
    * @param e List of all layers just being edited from the map. 
@@ -1286,36 +1279,17 @@ export default class Annotator extends Component<
    */
   private handleEditVertex = (e: any) => {
     console.log("🚀 ~ handleEditVertex e:", e);
-    // Assumption: We can only edit one layer at a time
-    // e.layers.eachLayer(layer => {
-    //   this.setSelectedAnnotation(e.layer);
-    // })
-    // this.setSelectedAnnotation(e.layer);
-    // console.log("🚀 ~ AssetAnnotations:", this.state.currentAssetAnnotations.length);
-    // const newAssetAnnotations = (this.state.currentAssetAnnotations).slice().filter((annotation: any) => 
-    //   annotation !== event.sourceTarget);
-    // console.log("🚀 ~ newAssetAnnotations:", newAssetAnnotations.length)
-    // newAssetAnnotations.push(event.target as PolylineObjectType);
-
-    // this.updateCurrentAssetAnnotations(newAssetAnnotations);
+    this.annotationAction = AnnotationAction.EDIT;
   };
-
 
   /**
    * @param e Event with Layer that was just moved. 
    * Triggered as the user moves a rectangle; circle or marker.
+   * This method is called repeatedly as the user resizes the layer so we have throttled it to 1000ms. 
    */
   private handleEditMove = (e: any) => {
     console.log("🚀 ~ handleEditMove e:", e);
-    // Assumption: We can only edit one layer at a time
-    // this.setSelectedAnnotation(e.layer);
-    // console.log("🚀 ~ AssetAnnotations:", this.state.currentAssetAnnotations.length);
-    // const newAssetAnnotations = (this.state.currentAssetAnnotations).slice().filter((annotation: any) => 
-    //   annotation !== event.sourceTarget);
-    // console.log("🚀 ~ newAssetAnnotations:", newAssetAnnotations.length)
-    // newAssetAnnotations.push(event.target as PolylineObjectType);
-
-    // this.updateCurrentAssetAnnotations(newAssetAnnotations);
+    this.annotationAction = AnnotationAction.EDIT;
   };
 
   /* Handle general click events */
@@ -1339,7 +1313,9 @@ export default class Annotator extends Component<
   }
 
   private handleMouseDown = (e: L.LeafletMouseEvent) => {
-    // console.log("🚀 ~ handleMouseDown e:", e)
+    console.log("🚀 ~ handleMouseDown e:", e)
+    // TODO: If shift is pressed, do: this.annotationAction = AnnotationAction.GROUP
+    this.annotationAction = AnnotationAction.SELECT;
     // console.log("🚀 ~ mouse down e:", e)
     // console.log('map mousedown', e);
     // const layer = e.propagatedFrom;
@@ -1364,38 +1340,26 @@ export default class Annotator extends Component<
   private handleMouseUp = (e: L.LeafletMouseEvent) => {
     console.log("🚀 ~ handleMouseUp:", e)
     // TODO: If the click is within a small distance from any annotation, select that annotation
-    /* Select annotation */ 
-    // const annotationLayers = this.annotationGroup.getLayers();
-    // const selectedAnnotation = annotationLayers.find((layer: any) => {
-    //   const layerElement = layer._path || layer._icon;
-    //   return layerElement === e.originalEvent.target;
-    // });
+    switch (this.annotationAction) {
+      case AnnotationAction.SELECT:
+        /* Select annotation */ 
+        const annotationLayers = this.annotationGroup.getLayers();
+        const selectedAnnotation = annotationLayers.find((layer: any) => {
+          const layerElement = layer._path || layer._icon;
+          return layerElement === e.originalEvent.target;
+        });
 
-    const clickPoint = e.containerPoint;
-    const threshold = 10; // Define a small distance threshold in pixels
-
-    /* Select annotation */
-    const annotationLayers = this.annotationGroup.getLayers();
-    let selectedAnnotation: AnnotationLayer | null = null;
-    annotationLayers.forEach((layer: any) => {
-      const layerElement = layer._path || layer._icon;
-      if (layerElement === e.originalEvent.target) {
-        selectedAnnotation = layer;
-      } else if (isPolylineObjectType(layer)) {
-        const layerPoint = this.map.latLngToContainerPoint(layer.getLatLngs() ? layer.getLatLngs() : layer.getCenter());
-        const distance = layerPoint.distanceTo(clickPoint);
-        if (distance < threshold) {
-          selectedAnnotation = layer as L.Layer as AnnotationLayer;
+        if (selectedAnnotation) {
+          this.setSelectedAnnotation(selectedAnnotation as AnnotationLayer);
+        } else {
+          this.setSelectedAnnotation(null);
         }
-      }
-    });
-
-    if (selectedAnnotation) {
-      console.log('yes')
-      this.setSelectedAnnotation(selectedAnnotation as AnnotationLayer);
-    } else {
-      console.log('no')
-      this.setSelectedAnnotation(null);
+        return;
+      case AnnotationAction.EDIT:
+        // Do nothing here
+        return;
+      default:
+        return
     }
 
     // TODO: Fix this more concise way
