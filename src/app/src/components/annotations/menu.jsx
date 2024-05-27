@@ -115,8 +115,11 @@ export default class AnnotationMenu extends Component {
     annotationArray.forEach(annotation => {
       if (annotation.options.annotationID) {
         this.annotationRefs[annotation.options.annotationID] = React.createRef();
+        console.log('REF MADE')
         this.tagCount[annotation.options.annotationTag] =
           (this.tagCount[annotation.options.annotationTag] || 0) + 1;
+      } else {
+        console.log('NO ANNOTATION ID HERE')
       }
     })
 
@@ -160,10 +163,16 @@ export default class AnnotationMenu extends Component {
     this.setState({
       selectedAnnotationID: annotation.options.annotationID,
     });
+    console.log("About to scroll into view...")
     /* Scroll to selected annotation */
-    this.annotationRefs[
+
+    // FIXME: { current: null }
+    const selectedAnnotationRef = this.annotationRefs[
       annotation.options.annotationID
-    ].current.scrollIntoView({ block: "nearest" });
+    ];
+    console.log("🚀 ~ AnnotationMenu ~ setSelectedAnnotation ~ selectedAnnotationRef:", selectedAnnotationRef)
+    selectedAnnotationRef?.current?.scrollIntoView({ block: "nearest" });
+    console.log("Scrolled.")
   }
 
   /**

@@ -1272,7 +1272,6 @@ export default class Annotator extends Component<
    * Triggered when a new vector or marker has been created.
    */
   private handleCreated = (e: any) => {
-    console.log("🚀 ~ handleCreated e:", e)
     const layer = e.layer;
     const options = {
       annotationTag: this.currentTag + 1,
@@ -1289,10 +1288,17 @@ export default class Annotator extends Component<
       (layer.options as any).annotationID, 
       this.annotationCallbacks,
     );
-    console.log("🚀 ~ handleCreated layer with listeners:", layerWithListeners);
 
     this.drawnFeatures.addLayer(layerWithListeners);
     this.annotationGroup.addLayer(layerWithListeners);
+
+    // Note: Update canvas' annotations. This is a workaround since `filterAnnotationVisibility` needs quite some refactoring
+    const newAssetAnnotations = (this.state.currentAssetAnnotations as PolylineObjectType[]).slice();
+    newAssetAnnotations.push(layerWithListeners);
+  
+    this.updateCurrentAssetAnnotations(newAssetAnnotations);
+    this.updateMenuBarAnnotations();
+    this.bindAnnotationTooltip(layerWithListeners, options.annotationID);
   }
 
   /**
@@ -1820,6 +1826,7 @@ export default class Annotator extends Component<
   /**
    * Update annotations list in menu bar state
    * to current annotationGroup
+   * FIXME: MESSING UP FOR NEW ANNOTATIONS
    */
   public updateMenuBarAnnotations(): void {
     if (this.menubarRef.current !== null) {
