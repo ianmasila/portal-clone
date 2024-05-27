@@ -711,7 +711,7 @@ export default class Annotator extends Component<
    * Set selected annotation to new annotation
    * @param annotation - annotation layer to be selected
    */
-  public setSelectedAnnotation(annotation: AnnotationLayer | null): void {
+  public setSelectedAnnotation(annotation: AnnotationLayer | null, editing?: boolean): void {
     this.setState(
       prevState => {
         const prevAnnotation = prevState.selectedAnnotation;
@@ -722,7 +722,9 @@ export default class Annotator extends Component<
         }
         if (annotation) {
           annotation.options.fillOpacity = 0.7;
-          annotation.editing?.enable();
+          if (editing) {
+            annotation.editing?.enable();
+          }
           // const centroid = (annotation as L.Layer as PolylineObjectType).getCenter();
           // // Convert latlng to pixel coordinates on viewport
           // const containerPoint = this.map.latLngToContainerPoint(centroid);
@@ -804,6 +806,9 @@ export default class Annotator extends Component<
       (annotation.options as any).fillColor = annotationColor;
     }
 
+    // Rebind tooltip
+    this.bindAnnotationTooltip(annotation);
+    this.setSelectedAnnotation(annotation);
   }
 
   /**
@@ -1348,7 +1353,7 @@ export default class Annotator extends Component<
         });
 
         if (selectedAnnotation) {
-          this.setSelectedAnnotation(selectedAnnotation as AnnotationLayer);
+          this.setSelectedAnnotation(selectedAnnotation as AnnotationLayer, true);
         } else {
           this.setSelectedAnnotation(null);
         }
@@ -1441,7 +1446,7 @@ export default class Annotator extends Component<
     };
 
     /* Default behaviour: select annotation and be able to edit it */
-    this.setSelectedAnnotation(event.target as AnnotationLayer);
+    this.setSelectedAnnotation(event.target as AnnotationLayer, true);
 
     /* If annotation menu option was selected, update selection data */
     const annotationOptionsSelectedAnnotation = this.state.annotationOptionsMenuSelection.selectedAnnotation;

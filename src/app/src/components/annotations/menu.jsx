@@ -163,16 +163,12 @@ export default class AnnotationMenu extends Component {
     this.setState({
       selectedAnnotationID: annotation.options.annotationID,
     });
-    console.log("About to scroll into view...")
     /* Scroll to selected annotation */
-
-    // FIXME: { current: null }
+    // FIXME for leaflet draw annotations: { current: null }
     const selectedAnnotationRef = this.annotationRefs[
       annotation.options.annotationID
     ];
-    console.log("🚀 ~ AnnotationMenu ~ setSelectedAnnotation ~ selectedAnnotationRef:", selectedAnnotationRef)
     selectedAnnotationRef?.current?.scrollIntoView({ block: "nearest" });
-    console.log("Scrolled.")
   }
 
   /**
