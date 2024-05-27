@@ -25,8 +25,8 @@ interface AnnotationOptionsMenuProps {
   onClose: () => void;
   callbacks: {
     handleAnnotationOptionsMenuSelection: (value: any, key: string) => void;
-    getTag: () => string;
-    setTag: () => void;
+    getAnnotationTag: () => string;
+    setAnnotationTag: (tagIndex: number) => number;
     getTagInfo: () => { [tag: string]: number } | any;
 
   };
@@ -43,7 +43,7 @@ const AnnotationOptionsMenu = forwardRef<HTMLDivElement, AnnotationOptionsMenuPr
   const [tagList, setTagList] = useState<string[]>([]);
 
   useEffect(() => {
-      const tag = callbacks.getTag();
+      const tag = callbacks.getAnnotationTag();
       const tagInfo = callbacks.getTagInfo();
       const tagList = Object.keys(tagInfo);
       setTag(tag);
@@ -67,6 +67,7 @@ const AnnotationOptionsMenu = forwardRef<HTMLDivElement, AnnotationOptionsMenuPr
         <MenuItem icon="tag" text={tag}>
           {tagList.map((tag, i) => (
               <MenuItem 
+                  key={`${tag}-${i}`}
                   text={`${i+1}. ${tag}`} 
                   onClick={() => setTag(tag)} />
           ))}

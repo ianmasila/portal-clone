@@ -1,18 +1,6 @@
 .menu {
     position: absolute;
-    background: #f0f0f0;
-    /* Light grey background similar to Safari context menu */
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15);
-    /* Subtle shadow */
     z-index: 1000;
-    width: 150px;
-    margin: 0;
-    padding: 0;
-    /* No padding, let the menu items handle the padding */
-    border-radius: 3px;
-    /* Slightly rounded corners */
-    overflow: hidden;
-    /* Ensure the border radius applies to the entire menu */
 }
 
 .menuItem {

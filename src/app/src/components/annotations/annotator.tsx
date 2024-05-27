@@ -2244,8 +2244,13 @@ export default class Annotator extends Component<
                 }
                 callbacks={{
                   handleAnnotationOptionsMenuSelection: this.handleAnnotationOptionsMenuSelection,
-                  getTag: () => {return 'haha'},
-                  setTag: () => {},
+                  getAnnotationTag: () => {
+                    const InvertedTags = invert(this.state.tagInfo.tags);
+                    const tag = InvertedTags[this.state.annotationOptionsMenuSelection.selectedAnnotation?.options.annotationTag];
+                    console.log("🚀 ~ render ~ tag:", tag)
+                    return tag;
+                  },
+                  setAnnotationTag: this.setAnnotationTag,
                   getTagInfo: () => {
                     return this.state.tagInfo.tags
                   }
