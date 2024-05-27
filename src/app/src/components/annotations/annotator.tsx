@@ -417,10 +417,12 @@ export default class Annotator extends Component<
     this.handleMouseUp = this.handleMouseUp.bind(this);
     this.handleMouseMove = this.handleMouseMove.bind(this);
     this.handleMouseOut = this.handleMouseOut.bind(this);
-    // this.handleContextMenu = this.handleContextMenu.bind(this);
+    this.handleContextMenu = this.handleContextMenu.bind(this);
     this.handleEditResize = throttle(this.handleEditResize, 1000).bind(this);
     this.handleEditVertex = this.handleEditVertex.bind(this);
     this.handleEditMove = throttle(this.handleEditMove, 1000).bind(this);
+    this.getSelectedAnnotation = this.getSelectedAnnotation.bind(this);
+
   }
 
   async componentDidMount(): Promise<void> {
@@ -461,7 +463,7 @@ export default class Annotator extends Component<
     this.map.on("mouseup", this.handleMouseUp);
     this.map.on("mousemove", this.handleMouseMove);
     this.map.on("mouseout", this.handleMouseUp);
-    // this.map.on("contextmenu", this.handleContextMenu);
+    this.map.on("contextmenu", this.handleContextMenu);
 
     // Add event listener for when a new shape is created
     // this.map.on(L.Draw.Event.CREATED,  (e) => {
@@ -605,7 +607,7 @@ export default class Annotator extends Component<
     this.map.off("mouseup", this.handleMouseUp);
     this.map.off("mousemove", this.handleMouseMove);
     this.map.off("mouseout", this.handleMouseUp);
-    // this.map.off("contextmenu", this.handleContextMenu);
+    this.map.off("contextmenu", this.handleContextMenu);
     this.map.off(L.Draw.Event.EDITRESIZE, this.handleEditResize);
     this.map.off(L.Draw.Event.EDITVERTEX, this.handleEditVertex);
     this.map.off(L.Draw.Event.EDITMOVE, this.handleEditMove);
@@ -1336,6 +1338,21 @@ export default class Annotator extends Component<
     //   }
     // });
   }
+
+  /**
+   * @param e 
+   * Find the selected annotation, if any, from a leaflet mouse event.
+   * @returns L.Layer | null
+   */
+  private getSelectedAnnotation = (e: L.LeafletMouseEvent) => {
+    const annotationLayers = this.annotationGroup.getLayers();
+    const selectedAnnotation = annotationLayers.find((layer: any) => {
+      const layerElement = layer._path || layer._icon;
+      return layerElement === e.originalEvent.target;
+    });
+
+    return selectedAnnotation ?? null;
+  }
   
   private handleMouseUp = (e: L.LeafletMouseEvent) => {
     console.log("🚀 ~ handleMouseUp:", e)
@@ -1382,9 +1399,29 @@ export default class Annotator extends Component<
   }
 
   /* Handle event where mouse leaves map */
-  // private handleContextMenu = (e: L.LeafletMouseEvent) => {
-  //   // TODO
-  // }
+  private handleContextMenu = (e: L.LeafletMouseEvent) => {
+    const selectedAnnotation = this.getSelectedAnnotation(e) as AnnotationLayer | null;
+    if (selectedAnnotation) {
+      e.originalEvent.preventDefault();
+      e.originalEvent.stopPropagation();
+      const x = e.originalEvent.clientX;
+      const y = e.originalEvent.clientY;
+      this.setState(prevState => {
+        return {
+          annotationOptionsMenuOpen: true,
+          annotationOptionsMenuPosition: { x, y },
+          annotationOptionsMenuSelection: {
+            ...prevState.annotationOptionsMenuSelection,
+            selectedAnnotation: selectedAnnotation,
+          }
+        }
+      })
+    } else {
+      console.log("🚀 ~ handleContextMenu else e:", e)
+      // TODO: Do original event
+      // e.originalEvent.defaultPrevented
+    }
+  }
 
   /* Handle right click events on annotations */
   private handleAnnotationRightClick = (event: L.LeafletMouseEvent, annotation: AnnotationLayer) => {
@@ -2207,6 +2244,11 @@ export default class Annotator extends Component<
                 }
                 callbacks={{
                   handleAnnotationOptionsMenuSelection: this.handleAnnotationOptionsMenuSelection,
+                  getTag: () => {return 'haha'},
+                  setTag: () => {},
+                  getTagInfo: () => {
+                    return this.state.tagInfo.tags
+                  }
                 }}
                 {...this.props}
               />
