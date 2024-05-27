@@ -418,6 +418,8 @@ export default class Annotator extends Component<
     this.handleMouseMove = this.handleMouseMove.bind(this);
     this.handleMouseOut = this.handleMouseOut.bind(this);
     this.handleContextMenu = this.handleContextMenu.bind(this);
+
+    this.handleCreated = this.handleCreated.bind(this);
     this.handleEditResize = throttle(this.handleEditResize, 1000).bind(this);
     this.handleEditVertex = this.handleEditVertex.bind(this);
     this.handleEditMove = throttle(this.handleEditMove, 1000).bind(this);
@@ -449,39 +451,20 @@ export default class Annotator extends Component<
     }).setView(Coordinate(5000, 5000), 0);
 
     this.annotationGroup.addTo(this.map);
-    // this.drawControl.addTo(this.map);
-    this.map.addControl(this.drawControl);
+    this.drawControl.addTo(this.map);
 
+    // Add event listener for when a new shape is created
+    this.map.on(L.Draw.Event.CREATED, this.handleCreated);
     this.map.on(L.Draw.Event.EDITRESIZE, this.handleEditResize);
     this.map.on(L.Draw.Event.EDITVERTEX, this.handleEditVertex);
     this.map.on(L.Draw.Event.EDITMOVE, this.handleEditMove);
     
-
-    // Listen for dragging annotation layers
     this.map.on("click", this.handleClick);
     this.map.on("mousedown", this.handleMouseDown);
     this.map.on("mouseup", this.handleMouseUp);
     this.map.on("mousemove", this.handleMouseMove);
     this.map.on("mouseout", this.handleMouseUp);
     this.map.on("contextmenu", this.handleContextMenu);
-
-    // Add event listener for when a new shape is created
-    // this.map.on(L.Draw.Event.CREATED,  (e) => {
-    //   console.log("🚀 ~ this.map.on draw created ~ e:", e)
-    //   const layer = e.layer;
-    //   const layerWithListeners = AttachAnnotationHandlers(
-    //     this.map, 
-    //     this.annotationGroup, 
-    //     layer,
-    //     this.project, 
-    //     (layer.options as any).annotationID, 
-    //     this.annotationCallbacks,
-    //   );
-    //   this.drawnFeatures.addLayer(layerWithListeners);
-    //   this.annotationGroup.addLayer(layerWithListeners);
-    // });
-
-   
 
     this.map.on("mouseup", () => {
       if (this.videoOverlay) {
@@ -508,29 +491,7 @@ export default class Annotator extends Component<
 
     /* Slight delay so that all images can be reliably fetched from the server */
     setTimeout(() => this.updateImage(), 200);
-
-    /* Document listeners */
-    // document.addEventListener('click', this.handleClick);
   }
-
-  // /* Handle general click events */
-  // private handleClick(e: MouseEvent) {
-  //   // Check if the target is an annotation layer
-  //   let selectedAnnotation: AnnotationLayer | null = null;
-  //   const annotationLayers = this.annotationGroup.getLayers();
-  //   for (const layer of annotationLayers) {
-  //     const layerElement = (layer as any)._path || (layer as any)._icon;
-  //     if (layerElement && layerElement === e.target) {
-  //       selectedAnnotation = layer as AnnotationLayer;
-  //       return; // Stop the iteration once the layer is found
-  //     }
-  //   }
-
-  //   if (!selectedAnnotation) {
-  //     this.setSelectedAnnotation(null);
-  //   }
-  // }
-
 
   // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
   componentDidUpdate() {
@@ -608,13 +569,12 @@ export default class Annotator extends Component<
     this.map.off("mousemove", this.handleMouseMove);
     this.map.off("mouseout", this.handleMouseUp);
     this.map.off("contextmenu", this.handleContextMenu);
+
+    this.map.off(L.Draw.Event.CREATED, this.handleCreated);
     this.map.off(L.Draw.Event.EDITRESIZE, this.handleEditResize);
     this.map.off(L.Draw.Event.EDITVERTEX, this.handleEditVertex);
     this.map.off(L.Draw.Event.EDITMOVE, this.handleEditMove);
-
-    // document.removeEventListener('click', this.handleClick);
   }
-
 
 
   private handlePlayPauseVideoOverlay() {
@@ -744,7 +704,6 @@ export default class Annotator extends Component<
    * @param annotation - annotation layer to be selected
    */
   public setSelectedAnnotation(annotation: AnnotationLayer | null): void {
-    console.log("🚀 ~ setSelectedAnnotation ~ setSelectedAnnotation:")
     this.setState(
       prevState => {
         const prevAnnotation = prevState.selectedAnnotation;
@@ -1266,12 +1225,45 @@ export default class Annotator extends Component<
   };
 
   /**
+   * @param e 
+   * Find the selected annotation, if any, from a leaflet mouse event.
+   * @returns L.Layer | null
+  */
+  private getSelectedAnnotation = (e: L.LeafletMouseEvent) => {
+    const annotationLayers = this.annotationGroup.getLayers();
+    const selectedAnnotation = annotationLayers.find((layer: any) => {
+      const layerElement = layer._path || layer._icon;
+      return layerElement === e.originalEvent.target;
+    });
+
+    return selectedAnnotation ?? null;
+  }
+
+  /**
+   * @param e `Polyline; Polygon; Rectangle; Circle; Marker` Layer that was just created. 
+   * Triggered when a new vector or marker has been created.
+   */
+  private handleCreated = (e: any) => {
+    console.log("🚀 ~ handleCreated e:", e)
+    const layer = e.layer;
+    const layerWithListeners = AttachAnnotationHandlers(
+      this.map, 
+      this.annotationGroup, 
+      layer,
+      this.project, 
+      (layer.options as any).annotationID, 
+      this.annotationCallbacks,
+    );
+    this.drawnFeatures.addLayer(layerWithListeners);
+    this.annotationGroup.addLayer(layerWithListeners);
+  }
+
+  /**
    * @param e Layer that was just resized.  
    * Triggered as the user resizes a rectangle or circle.
    * This method is called repeatedly as the user resizes the layer so we have throttled it to 1000ms. 
    */
   private handleEditResize = (e: any) => {
-    console.log("🚀 ~ handleEditResize e:", e);
     this.annotationAction = AnnotationAction.EDIT;
   };
 
@@ -1280,7 +1272,7 @@ export default class Annotator extends Component<
    * Triggered when a vertex is edited on a polyline or polygon.
    */
   private handleEditVertex = (e: any) => {
-    console.log("🚀 ~ handleEditVertex e:", e);
+    // console.log("🚀 ~ handleEditVertex e:", e);
     this.annotationAction = AnnotationAction.EDIT;
   };
 
@@ -1290,68 +1282,14 @@ export default class Annotator extends Component<
    * This method is called repeatedly as the user resizes the layer so we have throttled it to 1000ms. 
    */
   private handleEditMove = (e: any) => {
-    console.log("🚀 ~ handleEditMove e:", e);
+    // console.log("🚀 ~ handleEditMove e:", e);
     this.annotationAction = AnnotationAction.EDIT;
   };
 
-  /* Handle general click events */
-  private handleClick(e: L.LeafletMouseEvent) {
-    // console.log("🚀 ~ handleClick ~ e:", e)
-    // Check if the target is an annotation layer
-    let selectedAnnotation: AnnotationLayer | null = null;
-    const annotationLayers = this.annotationGroup.getLayers();
-    for (const layer of annotationLayers) {
-      const layerElement = (layer as any)._path || (layer as any)._icon;
-      if (layerElement && layerElement === e.originalEvent.target) {
-        selectedAnnotation = layer as AnnotationLayer;
-        this.setSelectedAnnotation(e.target as AnnotationLayer);
-        return; // Stop the iteration once the layer is found
-      }
-    }
-
-    if (!selectedAnnotation) {
-      this.setSelectedAnnotation(null);
-    }
-  }
-
   private handleMouseDown = (e: L.LeafletMouseEvent) => {
-    console.log("🚀 ~ handleMouseDown e:", e)
+    // console.log("🚀 ~ handleMouseDown e:", e)
     // TODO: If shift is pressed, do: this.annotationAction = AnnotationAction.GROUP
     this.annotationAction = AnnotationAction.SELECT;
-    // console.log("🚀 ~ mouse down e:", e)
-    // console.log('map mousedown', e);
-    // const layer = e.propagatedFrom;
-    
-    // const containerPoint = e.containerPoint;
-    // console.log("🚀 ~ containerPoint:", containerPoint)
-    // this.isDragging = true;
-    // this.startPoint = e.containerPoint; // Use containerPoint for pixel coordinates
-  
-    // // Calculate the centroid for each layer and use it as the lastPoint
-    // const layers = this.annotationGroup.getLayers();
-    // layers.forEach((layer: any) => {
-    //   if (layer instanceof L.Marker) {
-    //     this.lastPoint = this.map.latLngToContainerPoint(layer.getLatLng());
-    //   } else if (layer instanceof L.Polyline || layer instanceof L.Polygon) {
-    //     const centroid = layer.getCenter();
-    //     this.lastPoint = this.map.latLngToContainerPoint(centroid);
-    //   }
-    // });
-  }
-
-  /**
-   * @param e 
-   * Find the selected annotation, if any, from a leaflet mouse event.
-   * @returns L.Layer | null
-   */
-  private getSelectedAnnotation = (e: L.LeafletMouseEvent) => {
-    const annotationLayers = this.annotationGroup.getLayers();
-    const selectedAnnotation = annotationLayers.find((layer: any) => {
-      const layerElement = layer._path || layer._icon;
-      return layerElement === e.originalEvent.target;
-    });
-
-    return selectedAnnotation ?? null;
   }
   
   private handleMouseUp = (e: L.LeafletMouseEvent) => {
@@ -1417,10 +1355,22 @@ export default class Annotator extends Component<
         }
       })
     } else {
-      console.log("🚀 ~ handleContextMenu else e:", e)
-      // TODO: Do original event
-      // e.originalEvent.defaultPrevented
+      // Allow the default browser context menu to appear
+      const event = new MouseEvent('contextmenu', {
+        bubbles: true,
+        cancelable: true,
+        view: window,
+        clientX: e.originalEvent.clientX,
+        clientY: e.originalEvent.clientY,
+        button: e.originalEvent.button,
+      });
+      document.dispatchEvent(event);
     }
+  }
+
+  /* Handle general click events */
+  private handleClick(e: L.LeafletMouseEvent) {
+    // IGNORE
   }
 
   /* Handle right click events on annotations */
@@ -1845,7 +1795,7 @@ export default class Annotator extends Component<
    * to current annotationGroup
    */
   public updateCurrentAssetAnnotations(annotations: PolylineObjectType[]): void {
-    console.log("🚀 ~ updateCurrentAssetAnnotations ~ updateCurrentAssetAnnotations:")
+    // console.log("🚀 ~ updateCurrentAssetAnnotations ~ updateCurrentAssetAnnotations:")
     this.setState({
       currentAssetAnnotations: annotations,
     });
@@ -2247,7 +2197,6 @@ export default class Annotator extends Component<
                   getAnnotationTag: () => {
                     const InvertedTags = invert(this.state.tagInfo.tags);
                     const tag = InvertedTags[this.state.annotationOptionsMenuSelection.selectedAnnotation?.options.annotationTag];
-                    console.log("🚀 ~ render ~ tag:", tag)
                     return tag;
                   },
                   setAnnotationTag: this.setAnnotationTag,
