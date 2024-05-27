@@ -2,6 +2,8 @@ import React, { useState, useEffect, forwardRef } from 'react';
 import { Classes, Menu, MenuDivider, MenuItem } from "@blueprintjs/core";
 import styles from './annotationoptionsmenu.module.css';
 import { useOnClickOutside } from '../../hooks/useOnClickOutside';
+import { AnnotationLayer } from './types';
+import { invert } from 'lodash';
 
 type Size = "small" | "regular" | "large";
 
@@ -22,38 +24,27 @@ interface AnnotationOptionsMenuProps {
     x: number;
     y: number;
   } | null;
+  annotation: AnnotationLayer | null,
+  tags: { [tag: string]: number };
   onClose: () => void;
   callbacks: {
     handleAnnotationOptionsMenuSelection: (value: any, key: string) => void;
-    getAnnotationTag: () => string;
-    setAnnotationTag: (tagIndex: number) => number;
-    getTagInfo: () => { [tag: string]: number } | any;
-
+    updateAnnotation: (annotation: AnnotationLayer, options: { [key: string]: any }) => void;
   };
 }
 
 const AnnotationOptionsMenu = forwardRef<HTMLDivElement, AnnotationOptionsMenuProps>(
   ({
     position,
+    annotation,
+    tags,
     onClose,
     callbacks,
   }, ref) => {
-  // Improvement: SRP: Put this tag logic in a custom hook
-  const [tag, setTag] = useState<string>("");
-  const [tagList, setTagList] = useState<string[]>([]);
-
-  useEffect(() => {
-      const tag = callbacks.getAnnotationTag();
-      const tagInfo = callbacks.getTagInfo();
-      const tagList = Object.keys(tagInfo);
-      setTag(tag);
-      setTagList(tagList);
-  }, [])
-
   // Listen and respond to clicks outside menu
   useOnClickOutside(ref, 'mousedown', onClose);
 
-  if (!position) {
+  if (!position || !annotation) {
     return null;
   }
 
@@ -64,12 +55,16 @@ const AnnotationOptionsMenu = forwardRef<HTMLDivElement, AnnotationOptionsMenuPr
       ref={ref}
     >
       <Menu className={Classes.ELEVATION_1} {...getSizeProp("regular")}>
-        <MenuItem icon="tag" text={tag}>
-          {tagList.map((tag, i) => (
+        <MenuItem icon="tag" text={(invert(tags))[annotation.options.annotationTag]}>
+          {Object.entries(tags).map(([tag, tagId], i) => (
               <MenuItem 
-                  key={`${tag}-${i}`}
-                  text={`${i+1}. ${tag}`} 
-                  onClick={() => setTag(tag)} />
+                key={`${tag}-${i}`}
+                text={`${i+1}. ${tag}`} 
+                onClick={() => {
+                  callbacks.updateAnnotation(annotation, { annotationTag: tagId });
+                  onClose();
+                }}
+              />
           ))}
         </MenuItem>
         <MenuDivider />

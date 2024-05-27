@@ -21,9 +21,11 @@ import {
 import makeEta from "simple-eta";
 
 import {
-  RenderAssetAnnotations,
+  GenerateAssetAnnotations,
   GetAnnotationIntersection,
   AttachAnnotationHandlers,
+  AttachAnnotationOptions,
+  GetAnnotationColour,
 } from "@portal/components/annotations/utils/annotation";
 
 import {
@@ -59,6 +61,8 @@ import { RegisteredModel } from "./model";
 import AnnotationOptionsMenu from "./annotationoptionsmenu";
 import { AlertContent } from "@portal/constants/annotation";
 import { AnnotationAction } from "@portal/components/annotations/enums";
+import { NumberGenerator } from "@portal/utils/generators";
+import { generateID } from "@portal/utils/index";
 
 type Point = [number, number];
 type MapType = L.DrawMap;
@@ -213,6 +217,7 @@ export default class Annotator extends Component<
    * Current Tag is read on SetAnnotationTag. this is an unwanted side-effect but
    * Is used to overcome the unused-vars. This is still an important state though
    * so it is being kept here.
+   * Note that this is the tag index. Careful about off-by-one error
    */
   private currentTag: number;
   private menubarRef: React.RefObject<AnnotationMenu>;
@@ -245,6 +250,8 @@ export default class Annotator extends Component<
   public endPoint: Point | null;
   public annotationAction: AnnotationAction;
 
+  /* Iterator whose next function gives the next tag id, simply incremented */
+  public tagIdGenerator: NumberGenerator;
 
   constructor(props: AnnotatorProps) {
     super(props);
@@ -303,6 +310,8 @@ export default class Annotator extends Component<
       selectedAnnotation: null,
     };
 
+    this.tagIdGenerator = new NumberGenerator();
+
     this.toaster = new Toaster({}, {});
     this.progressToastInterval = 600;
 
@@ -351,7 +360,8 @@ export default class Annotator extends Component<
     this.singleAnalysis = this.singleAnalysis.bind(this);
     this.getInference = this.getInference.bind(this);
     this.bulkAnalysis = this.bulkAnalysis.bind(this);
-    this.updateAnnotations = this.updateAnnotations.bind(this);
+    this.renderAnnotations = this.renderAnnotations.bind(this);
+    this.updateAnnotation = this.updateAnnotation.bind(this);
 
     this.resetControls = this.resetControls.bind(this);
 
@@ -424,7 +434,6 @@ export default class Annotator extends Component<
     this.handleEditVertex = this.handleEditVertex.bind(this);
     this.handleEditMove = throttle(this.handleEditMove, 1000).bind(this);
     this.getSelectedAnnotation = this.getSelectedAnnotation.bind(this);
-
   }
 
   async componentDidMount(): Promise<void> {
@@ -575,7 +584,6 @@ export default class Annotator extends Component<
     this.map.off(L.Draw.Event.EDITVERTEX, this.handleEditVertex);
     this.map.off(L.Draw.Event.EDITMOVE, this.handleEditMove);
   }
-
 
   private handlePlayPauseVideoOverlay() {
     const videoElement = this.videoOverlay?.getElement();
@@ -781,6 +789,24 @@ export default class Annotator extends Component<
   }
 
   /**
+   * @param annotation Annotation layer
+   * @param options Options object to set to annotation
+   */
+  public updateAnnotation(annotation: AnnotationLayer, options: { [key: string]: any }): void {
+    Object.entries(options).forEach(([key, value]) => {
+      (annotation.options as any)[key] = value;
+    });
+
+    // If annotation tag is updated, update annotation colour too
+    if (options.annotationTag) {
+      const annotationColor = GetAnnotationColour(undefined, options.annotationTag);
+      (annotation.options as any).color = annotationColor;
+      (annotation.options as any).fillColor = annotationColor;
+    }
+
+  }
+
+  /**
    * Intersect 2 annotations in annotationGroup
    * @param annotation1 - The first annotation to intersect
    * @param annotation2 - The second annotation to intersect
@@ -793,9 +819,9 @@ export default class Annotator extends Component<
     const intersection = GetAnnotationIntersection(poly1, poly2);
     if (intersection) {
       const intersectionWithListeners = AttachAnnotationHandlers(
+        intersection,
         this.map, 
         this.annotationGroup, 
-        intersection,
         this.project, 
         (intersection.options as any).annotationID, 
         this.annotationCallbacks,
@@ -1018,7 +1044,7 @@ export default class Annotator extends Component<
       )
         .then(response => {
           if (this.currentAsset.url === asset.url && singleAnalysis)
-            this.updateAnnotations(response.data);
+            this.renderAnnotations(response.data);
         })
         .catch(error => {
           let message = "Failed to predict image.";
@@ -1064,7 +1090,7 @@ export default class Annotator extends Component<
               ).toString();
 
               if (response.data.frames[key]) {
-                this.updateAnnotations(response.data.frames[key]);
+                this.renderAnnotations(response.data.frames[key]);
               }
 
               /**
@@ -1103,7 +1129,7 @@ export default class Annotator extends Component<
    * and renders the annotations on the Leaflet Layer
    * @param {any} annotations
    */
-  private updateAnnotations = (annotations: any) => {
+  private renderAnnotations = (annotations: any) => {
     const res = {
       metadata: this.currentAsset.metadata,
       url: this.currentAsset.url,
@@ -1115,7 +1141,7 @@ export default class Annotator extends Component<
       type: this.currentAsset.type,
       isCached: this.currentAsset.isCached,
     };
-    const currentAssetAnnotations: Array<PolylineObjectType> = RenderAssetAnnotations(
+    const { polylineObjects: currentAssetAnnotations, lastAnnotationTag, lastAnnotationID } = GenerateAssetAnnotations(
       this.map,
       this.annotationGroup,
       res,
@@ -1126,6 +1152,8 @@ export default class Annotator extends Component<
       this.state.tagInfo.tags,
       this.annotationCallbacks,
     );
+
+    this.tagIdGenerator.setLastId(lastAnnotationTag);
 
     this.annotationGroup.clearLayers();
 
@@ -1246,14 +1274,23 @@ export default class Annotator extends Component<
   private handleCreated = (e: any) => {
     console.log("🚀 ~ handleCreated e:", e)
     const layer = e.layer;
+    const options = {
+      annotationTag: this.currentTag + 1,
+      annotationID: generateID(),
+      annotationType: e.layerType,
+      annotationProjectID: this.project,
+    }
+    const layerWithOptions = AttachAnnotationOptions(layer, options);
     const layerWithListeners = AttachAnnotationHandlers(
+      layerWithOptions,
       this.map, 
       this.annotationGroup, 
-      layer,
       this.project, 
       (layer.options as any).annotationID, 
       this.annotationCallbacks,
     );
+    console.log("🚀 ~ handleCreated layer with listeners:", layerWithListeners);
+
     this.drawnFeatures.addLayer(layerWithListeners);
     this.annotationGroup.addLayer(layerWithListeners);
   }
@@ -2187,6 +2224,8 @@ export default class Annotator extends Component<
               <AnnotationOptionsMenu
                 ref={this.annotationOptionsMenuRef}
                 position={this.state.annotationOptionsMenuPosition}
+                annotation={this.state.annotationOptionsMenuSelection.selectedAnnotation}
+                tags={this.state.tagInfo.tags}
                 onClose={
                   !this.state.annotationOptionsMenuOpen
                     ? this.handleAnnotationOptionsMenuOpen
@@ -2194,15 +2233,7 @@ export default class Annotator extends Component<
                 }
                 callbacks={{
                   handleAnnotationOptionsMenuSelection: this.handleAnnotationOptionsMenuSelection,
-                  getAnnotationTag: () => {
-                    const InvertedTags = invert(this.state.tagInfo.tags);
-                    const tag = InvertedTags[this.state.annotationOptionsMenuSelection.selectedAnnotation?.options.annotationTag];
-                    return tag;
-                  },
-                  setAnnotationTag: this.setAnnotationTag,
-                  getTagInfo: () => {
-                    return this.state.tagInfo.tags
-                  }
+                  updateAnnotation: this.updateAnnotation,
                 }}
                 {...this.props}
               />

@@ -1,3 +1,11 @@
+import { v4 as uuidv4 } from 'uuid';
+
+/**
+ * Function that generates a unique id.
+ * @returns String id
+ */
+export const generateID = (): string => uuidv4();
+
 /**
  * Convert hex color to rgba
  * @param hex The hex color code (example: #000000)

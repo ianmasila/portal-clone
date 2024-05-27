@@ -15,7 +15,7 @@ import {
 } from "@portal/constants/annotation";
 import { AssetAPIObject } from "@portal/api/annotation";
 import { AnnotationLayer, PolylineObjectType } from "@portal/components/annotations/types";
-import { blendHexColors } from "@portal/utils/index";
+import { blendHexColors, generateID } from "@portal/utils/index";
 
 export const isPolylineObjectType = (layer: any): layer is PolylineObjectType => {
   return layer instanceof L.Polyline || layer instanceof L.Rectangle || layer instanceof L.Polygon;
@@ -32,7 +32,7 @@ export const GetTagHashColour = (tagid: number): string => {
  * Obtain Tag Colours by TagID
  */
 export const GetAnnotationColour = (
-  Tags: { [tag: string]: number },
+  Tags: { [tag: string]: number } | undefined,
   tagid: number
 ): string => {
   return GetTagHashColour(tagid);
@@ -96,41 +96,25 @@ export function GetAnnotationIntersection(
  * annotation layers.
  */
 export const AttachAnnotationHandlers = (
+  layer: L.Layer | any,
   drawmap: L.DrawMap,
   annotationGroup: L.FeatureGroup,
-  layer: L.Layer | any,
   project: string,
   annotationID: string | undefined,
   callbacks?: {
     handleAnnotationRightClick?: (event: L.LeafletMouseEvent, annotation: AnnotationLayer) => void;
     handleAnnotationLeftClick?: (event: L.LeafletMouseEvent, annotation: AnnotationLayer) => void;
-    handleAnnotationEdit?: (event: L.LeafletEvent, annotation: AnnotationLayer) => void;
-
   } 
 ): PolylineObjectType => {
-  // Add right-click event listener to the layer
-  // layer.on("contextmenu", (event: L.LeafletMouseEvent) => {
-  //   callbacks?.handleAnnotationRightClick?.(event, layer);
-  // });
-  // // Add left-click event listener to the layer
-  // layer.on("click", (event: L.LeafletMouseEvent) => {
-  //   // TODO: Ensure click event is ignored if parent event was right click
-  //   if (event.type !== "contextmenu") {
-  //     callbacks?.handleAnnotationLeftClick?.(event, layer);
-  //   }
-  // });
-  // // Add listeners for edit events
-  // if (layer.editing) {
-  //   layer.on('edit', (event: L.LeafletEvent) => {
-  //     callbacks?.handleAnnotationEdit?.(event, layer);
-  //   });
-  // }
-
   /**
    * Obtain Annotation ID from Layer Attribution of AnnotationID is Undefined
    */
   // eslint-disable-next-line no-param-reassign
-  (layer.options as any).annotationID = annotationID;
+  if (!annotationID) {
+    (layer.options as any).annotationID = generateID();
+  } else {
+    (layer.options as any).annotationID = annotationID;
+  }
 
   return layer;
 };
@@ -139,11 +123,9 @@ export const AttachAnnotationHandlers = (
 /**
  * This function generates leaflet vector objects such as polygon and rectangle
  * that will be rendered on leaflet canvas using database defined descriptors.
- *
  * @param {JSON} annotations - Stored recipe for reconstructing annotations
- * @return {Array<L.Polyline>}
  */
-export function RenderAssetAnnotations(
+export function GenerateAssetAnnotations(
   drawmap: L.DrawMap,
   annotationGroup: L.FeatureGroup,
   asset: AssetAPIObject,
@@ -154,11 +136,12 @@ export function RenderAssetAnnotations(
   callbacks?: {
     handleAnnotationRightClick?: (event: L.LeafletMouseEvent, annotation: AnnotationLayer) => void;
     handleAnnotationLeftClick?: (event: L.LeafletMouseEvent, annotation: AnnotationLayer) => void;
-    handleAnnotationEdit?: (event: L.LeafletEvent, annotation: AnnotationLayer) => void;
-  } 
-): Array<PolylineObjectType> {
+  }): {
+    polylineObjects: Array<PolylineObjectType>,
+    lastAnnotationTag: number,
+    lastAnnotationID: string,
+  }{
   const polylineObjects: Array<PolylineObjectType> = [];
-
   /* Generate Each Polyline Object per Annotation in Asset */
   let imageCoordinateBounds: Array<L.LatLng> = [];
   const primitiveOptions = PrimitiveShapeOptions;
@@ -228,6 +211,8 @@ export function RenderAssetAnnotations(
     primitiveOptions.annotationProjectID = project;
     primitiveOptions.confidence = annotation.confidence;
 
+    const layer = PrimitiveObject(imageCoordinateBounds, primitiveOptions);
+        
     /**
      * Push Polyline Object into Array
      * Also, attach an OndeleteHandler to call the correct API when 'delete'
@@ -235,9 +220,9 @@ export function RenderAssetAnnotations(
      */
     polylineObjects.push(
       AttachAnnotationHandlers(
+        layer,
         drawmap,
         annotationGroup,
-        PrimitiveObject(imageCoordinateBounds, primitiveOptions),
         project,
         annotation.annotationID,
         callbacks,
@@ -245,5 +230,43 @@ export function RenderAssetAnnotations(
     );
   });
 
-  return polylineObjects;
+  const lastAnnotationTag = Math.max(...asset.annotations.map(annotaion => annotaion.tag.id));
+  const lastAnnotationID = `${asset.annotations.length - 1}`;
+
+  return {
+    polylineObjects,
+    lastAnnotationTag,
+    lastAnnotationID
+  }
+}
+
+/**
+ * 
+ * @param layer Leaflet layer 
+ * @param annotationTag Tag id to be assigned to layer
+ * @param annotationID Annotation ID to be assigned to layer
+ * @param options Options to be added to layer 
+ * @param tags Object of tag name to tag id
+ * Use this function only after creating a new layer.
+ * @returns Layer with options set
+ */
+export const AttachAnnotationOptions = (
+  layer: L.Layer | any,
+  options: { [key: string]: any },
+) => {
+  /* Obtain Colour */
+  const primitiveOptions = PrimitiveShapeOptions;
+  Object.entries(primitiveOptions).forEach(([key, value]) => {
+    (layer.options as any)[key] = value;
+  });
+
+  const color = GetAnnotationColour(undefined, options.annotationTag);
+  (layer.options as any).color = color;
+  (layer.options as any).fillColor = color;
+
+  Object.entries(options).forEach(([key, value]) => {
+    (layer.options as any)[key] = value;
+  });
+
+  return layer;
 }

@@ -113,10 +113,12 @@ export default class AnnotationMenu extends Component {
     this.annotationRefs = {};
     this.tagCount = {};
     annotationArray.forEach(annotation => {
-      this.annotationRefs[annotation.options.annotationID] = React.createRef();
-      this.tagCount[annotation.options.annotationTag] =
-        (this.tagCount[annotation.options.annotationTag] || 0) + 1;
-    });
+      if (annotation.options.annotationID) {
+        this.annotationRefs[annotation.options.annotationID] = React.createRef();
+        this.tagCount[annotation.options.annotationTag] =
+          (this.tagCount[annotation.options.annotationTag] || 0) + 1;
+      }
+    })
 
     /**
      * Store annotation together with display counter
