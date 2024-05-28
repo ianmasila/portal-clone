@@ -211,6 +211,9 @@ export function GenerateAssetAnnotations(
     primitiveOptions.annotationProjectID = project;
     primitiveOptions.confidence = annotation.confidence;
 
+    primitiveOptions.createdAt = Date.now();
+    primitiveOptions.updatedAt = Date.now();
+
     const layer = PrimitiveObject(imageCoordinateBounds, primitiveOptions);
         
     /**

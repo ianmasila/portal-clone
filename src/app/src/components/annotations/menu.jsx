@@ -94,15 +94,14 @@ export default class AnnotationMenu extends Component {
    */
   setAnnotations(annotationGroup) {
     const annotationArray = Object.values(annotationGroup._layers);
-
     /* Sort by Tag number, and then annotation ID */
     annotationArray.sort((a, b) => {
       const tagDiff =
         this.tagIDtoDisplayIndex[a.options.annotationTag] -
         this.tagIDtoDisplayIndex[b.options.annotationTag];
       if (tagDiff !== 0) return tagDiff;
-      if (a.options.annotationID < b.options.annotationID) return -1;
-      if (a.options.annotationID > b.options.annotationID) return 1;
+      if (a.options.createdAt < b.options.createdAt) return -1;
+      if (a.options.createdAt > b.options.createdAt) return 1;
       return 0;
     });
 
@@ -115,11 +114,8 @@ export default class AnnotationMenu extends Component {
     annotationArray.forEach(annotation => {
       if (annotation.options.annotationID) {
         this.annotationRefs[annotation.options.annotationID] = React.createRef();
-        console.log('REF MADE')
         this.tagCount[annotation.options.annotationTag] =
           (this.tagCount[annotation.options.annotationTag] || 0) + 1;
-      } else {
-        console.log('NO ANNOTATION ID HERE')
       }
     })
 
@@ -240,7 +236,6 @@ export default class AnnotationMenu extends Component {
   }
 
   render() {
-    console.log('menu props projectTags', this.props.projectTags);
     this.updateHiddenTagCount();
     /**
      * List of tags to be displayed under Tags tab
@@ -303,7 +298,7 @@ export default class AnnotationMenu extends Component {
         {this.state.annotations
           .filter(
             ([annotation, _]) =>
-              annotation.options.confidence > this.props.confidence &&
+              annotation.options.confidence >= this.props.confidence &&
               /* If no filters selected, should return true. This is to
               guard against some returning false on empty arrays */
               (this.props.filterArr.length === 0 ||

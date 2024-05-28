@@ -11,6 +11,8 @@ export const PrimitiveShapeOptions = {
   annotationAssetID: "",
   annotationProjectID: "",
   confidence: 0,
+  createdAt: new Date(0).getTime(),
+  updatedAt: new Date(0).getTime(),
 };
 
 /* Qualitative Colour Scheme - Series of unrelated colors to create a scheme 

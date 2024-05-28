@@ -811,6 +811,8 @@ export default class Annotator extends Component<
       (annotation.options as any).fillColor = annotationColor;
     }
 
+    (annotation.options as any).updatedAt = Date.now();
+
     this.bindAnnotationTooltip(annotation);
     this.setSelectedAnnotation(annotation);
   }
@@ -1176,7 +1178,6 @@ export default class Annotator extends Component<
     this.updateMenuBarAnnotations();
     /* Show all annotations */
     this.filterAnnotationVisibility();
-    console.log('tag info after render annotations', this.state.tagInfo);
   };
 
   /**
@@ -1290,6 +1291,8 @@ export default class Annotator extends Component<
       annotationType: e.layerType,
       annotationProjectID: this.project,
       confidence: this.state.confidence,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
     }
     const layerWithOptions = AttachAnnotationOptions(layer, options);
     const layerWithListeners = AttachAnnotationHandlers(
@@ -1311,7 +1314,6 @@ export default class Annotator extends Component<
     this.updateCurrentAssetAnnotations(newAssetAnnotations);
     this.updateMenuBarAnnotations();
     this.bindAnnotationTooltip(layerWithListeners);
-    console.log('created layer', layerWithListeners);
   }
 
   /**
@@ -1640,16 +1642,11 @@ export default class Annotator extends Component<
   /** Bind tooltip to annotation */
   private bindAnnotationTooltip = (layer?: L.Layer | any, label?: string) => {
     const InvertedTags = invert(this.state.tagInfo.tags);
-    console.log("🚀 ~ InvertedTags:", InvertedTags)
-    console.log("🚀 ~ annotationTag:", layer.options.annotationTag)
-    console.log('label', label)
-
 
     /* Had to inject custom CSS */
     layer.unbindTooltip();
     /* Render base tooltip first to check offset */
     const text = label ?? InvertedTags[layer.options.annotationTag] ?? '';
-    console.log("🚀 ~ text:", text)
     layer.bindTooltip(
       `<span class='bp3-tag'
         style='
@@ -1845,7 +1842,7 @@ export default class Annotator extends Component<
   /**
    * Update annotations list in menu bar state
    * to current annotationGroup
-   * FIXME: MESSING UP FOR NEW ANNOTATIONS
+   * FIXME: NEW ANNOTATIONS do not show up on menu immediately
    */
   public updateMenuBarAnnotations(): void {
     if (this.menubarRef.current !== null) {
