@@ -11,6 +11,11 @@ export interface AnnotationLayer extends L.Layer {
     options: any;
 };
 
+/* Annotation group/cluster */
+export interface AnnotationCluster {
+  annotations: AnnotationLayer[];
+} 
+
 /* Annotation Interface */
 export interface AnnotationTagType {
   tagname: string;

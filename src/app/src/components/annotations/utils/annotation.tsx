@@ -101,10 +101,7 @@ export const AttachAnnotationHandlers = (
   annotationGroup: L.FeatureGroup,
   project: string,
   annotationID: string | undefined,
-  callbacks?: {
-    handleAnnotationRightClick?: (event: L.LeafletMouseEvent, annotation: AnnotationLayer) => void;
-    handleAnnotationLeftClick?: (event: L.LeafletMouseEvent, annotation: AnnotationLayer) => void;
-  } 
+  callbacks?: Record<any, any>,
 ): PolylineObjectType => {
   /**
    * Obtain Annotation ID from Layer Attribution of AnnotationID is Undefined
@@ -133,10 +130,8 @@ export function GenerateAssetAnnotations(
   assetWidth: number,
   assetHeight: number,
   tags: { [tag: string]: number },
-  callbacks?: {
-    handleAnnotationRightClick?: (event: L.LeafletMouseEvent, annotation: AnnotationLayer) => void;
-    handleAnnotationLeftClick?: (event: L.LeafletMouseEvent, annotation: AnnotationLayer) => void;
-  }): {
+  callbacks?: Record<any, any>,
+): {
     polylineObjects: Array<PolylineObjectType>,
     lastAnnotationTag: number,
     lastAnnotationID: string,
