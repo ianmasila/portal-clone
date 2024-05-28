@@ -712,11 +712,7 @@ export default class Annotator extends Component<
    * @param annotation - annotation layer to be selected
    */
   public setSelectedAnnotation(annotation: AnnotationLayer | null, editing?: boolean): void {
-    const tagId = annotation?.options?.annotationTag;
-    if (tagId != undefined) {
-      this.setAnnotationTag(tagId);
-    }
-
+    console.log("🚀 ~ setSelectedAnnotation ~ annotation:", annotation)
     this.setState(
       prevState => {
         const prevAnnotation = prevState.selectedAnnotation;
@@ -730,11 +726,6 @@ export default class Annotator extends Component<
           if (editing) {
             annotation.editing?.enable();
           }
-          // const centroid = (annotation as L.Layer as PolylineObjectType).getCenter();
-          // // Convert latlng to pixel coordinates on viewport
-          // const containerPoint = this.map.latLngToContainerPoint(centroid);
-          // this.startPoint = [containerPoint.x, containerPoint.y];
-          // this.endPoint = [containerPoint.x, containerPoint.y];
         }
         /* Update selected annotation on menubar */
         if (this.menubarRef.current !== null) {
@@ -744,6 +735,11 @@ export default class Annotator extends Component<
         return { selectedAnnotation: annotation };
       }
     )
+    
+    const tagId = annotation?.options?.annotationTag;
+    if (tagId != undefined) {
+      this.setAnnotationTag(tagId);
+    }
   }
 
   /**
@@ -799,7 +795,16 @@ export default class Annotator extends Component<
    * @param annotation Annotation layer
    * @param options Options object to set to annotation
    */
-  public updateAnnotation(annotation: AnnotationLayer, options: { [key: string]: any }): void {
+  public updateAnnotation(annotation: AnnotationLayer | undefined | null, options: { [key: string]: any } = {}): void {
+    if (!annotation) {
+      return
+    }
+    const currentAssetAnnotationsClone = (this.state.currentAssetAnnotations as PolylineObjectType[]).slice();
+    console.log("🚀 ~ updateAnnotation ~ currentAssetAnnotationsClone:", currentAssetAnnotationsClone.length)
+    const newAssetAnnotations = currentAssetAnnotationsClone.filter(
+      assetAnnotation => assetAnnotation !== annotation as L.Layer as PolylineObjectType);
+    console.log("🚀 ~ updateAnnotation ~ newAssetAnnotations:", newAssetAnnotations.length)
+
     Object.entries(options).forEach(([key, value]) => {
       (annotation.options as any)[key] = value;
     });
@@ -812,9 +817,15 @@ export default class Annotator extends Component<
     }
 
     (annotation.options as any).updatedAt = Date.now();
+    // Note: Update canvas' annotations. This is a workaround since `filterAnnotationVisibility` needs quite some refactoring
 
+    newAssetAnnotations.push(annotation as L.Layer as PolylineObjectType);
+    this.updateCurrentAssetAnnotations(newAssetAnnotations);
+    this.updateMenuBarAnnotations();
     this.bindAnnotationTooltip(annotation);
-    this.setSelectedAnnotation(annotation);
+    this.setSelectedAnnotation(annotation, !!annotation.editing);
+    console.log("🚀 ~ updateAnnotation ~ newAssetAnnotations after push:", newAssetAnnotations.length)
+
   }
 
   /**
@@ -1356,11 +1367,7 @@ export default class Annotator extends Component<
     switch (this.annotationAction) {
       case AnnotationAction.SELECT:
         /* Select annotation */ 
-        const annotationLayers = this.annotationGroup.getLayers();
-        const selectedAnnotation = annotationLayers.find((layer: any) => {
-          const layerElement = layer._path || layer._icon;
-          return layerElement === e.originalEvent.target;
-        });
+        const selectedAnnotation = this.getSelectedAnnotation(e) as AnnotationLayer | null;
 
         if (selectedAnnotation) {
           this.setSelectedAnnotation(selectedAnnotation as AnnotationLayer, true);
@@ -1369,7 +1376,11 @@ export default class Annotator extends Component<
         }
         return;
       case AnnotationAction.EDIT:
-        // Do nothing here
+        /* Update annotation */
+        this.updateAnnotation(this.state.selectedAnnotation);
+        return;
+      case AnnotationAction.OPTIONS:
+        this.setSelectedAnnotation(null);
         return;
       default:
         return
@@ -1402,6 +1413,9 @@ export default class Annotator extends Component<
       e.originalEvent.stopPropagation();
       const x = e.originalEvent.clientX;
       const y = e.originalEvent.clientY;
+      
+      this.annotationAction = AnnotationAction.OPTIONS;
+
       this.setState(prevState => {
         return {
           annotationOptionsMenuOpen: true,
@@ -1624,7 +1638,9 @@ export default class Annotator extends Component<
       )
       .forEach((confidentAnnotation: any) => {
         /* Add It Onto Leaflet */
-        const annotationToCommit = cloneDeep(confidentAnnotation);
+        // CAUTION: DEEP CLONE REMOVES UPDATES MADE ON ANNOTATION
+        // const annotationToCommit = cloneDeep(confidentAnnotation);
+        const annotationToCommit = confidentAnnotation;
         /* Customize Annotation Opacity */
         annotationToCommit.options.fillOpacity = this.state.annotationOptions.opacity;
         /* Customize Annotation Outline Toggle */
