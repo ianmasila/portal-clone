@@ -63,6 +63,7 @@ import { AlertContent } from "@portal/constants/annotation";
 import { AnnotationAction } from "@portal/components/annotations/enums";
 import { NumberGenerator } from "@portal/utils/generators";
 import { generateID } from "@portal/utils/index";
+import { throws } from "assert";
 
 type Point = [number, number];
 type MapType = L.DrawMap;
@@ -806,7 +807,6 @@ export default class Annotator extends Component<
       (annotation.options as any).fillColor = annotationColor;
     }
 
-    // Rebind tooltip
     this.bindAnnotationTooltip(annotation);
     this.setSelectedAnnotation(annotation);
   }
@@ -1172,6 +1172,7 @@ export default class Annotator extends Component<
     this.updateMenuBarAnnotations();
     /* Show all annotations */
     this.filterAnnotationVisibility();
+    console.log('tag info after render annotations', this.state.tagInfo);
   };
 
   /**
@@ -1281,8 +1282,10 @@ export default class Annotator extends Component<
     const options = {
       annotationTag: this.currentTag + 1,
       annotationID: generateID(),
+      annotationAssetID: this.currentAsset.assetUrl,
       annotationType: e.layerType,
       annotationProjectID: this.project,
+      confidence: this.state.confidence,
     }
     const layerWithOptions = AttachAnnotationOptions(layer, options);
     const layerWithListeners = AttachAnnotationHandlers(
@@ -1290,7 +1293,7 @@ export default class Annotator extends Component<
       this.map, 
       this.annotationGroup, 
       this.project, 
-      (layer.options as any).annotationID, 
+      (layerWithOptions.options as any).annotationID, 
       this.annotationCallbacks,
     );
 
@@ -1303,7 +1306,8 @@ export default class Annotator extends Component<
   
     this.updateCurrentAssetAnnotations(newAssetAnnotations);
     this.updateMenuBarAnnotations();
-    this.bindAnnotationTooltip(layerWithListeners, options.annotationID);
+    this.bindAnnotationTooltip(layerWithListeners);
+    console.log('created layer', layerWithListeners);
   }
 
   /**
@@ -1632,10 +1636,16 @@ export default class Annotator extends Component<
   /** Bind tooltip to annotation */
   private bindAnnotationTooltip = (layer?: L.Layer | any, label?: string) => {
     const InvertedTags = invert(this.state.tagInfo.tags);
+    console.log("🚀 ~ InvertedTags:", InvertedTags)
+    console.log("🚀 ~ annotationTag:", layer.options.annotationTag)
+    console.log('label', label)
+
 
     /* Had to inject custom CSS */
     layer.unbindTooltip();
     /* Render base tooltip first to check offset */
+    const text = label ?? InvertedTags[layer.options.annotationTag] ?? '';
+    console.log("🚀 ~ text:", text)
     layer.bindTooltip(
       `<span class='bp3-tag'
         style='
@@ -1645,7 +1655,7 @@ export default class Annotator extends Component<
           z-index: -1;
           pointer-events: none;'
       >
-        ${label ?? InvertedTags[layer.options.annotationTag] ?? ''}
+        ${text}
       </span>`,
       {
         interactive: false,

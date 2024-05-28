@@ -230,7 +230,7 @@ export function GenerateAssetAnnotations(
     );
   });
 
-  const lastAnnotationTag = Math.max(...asset.annotations.map(annotaion => annotaion.tag.id));
+  const lastAnnotationTag = Math.max(...asset.annotations.map(annotation => annotation.tag.id));
   const lastAnnotationID = `${asset.annotations.length - 1}`;
 
   return {
