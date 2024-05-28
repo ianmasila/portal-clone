@@ -146,11 +146,11 @@ export default class AnnotationMenu extends Component {
     });
   }
 
-  setAnnotationTag(idx) {
+  setAnnotationTag(tagid) {
     this.setState({
-      selectedTag: idx,
+      selectedTag: tagid,
     });
-    this.props.callbacks.SetAnnotationTag(idx);
+    this.props.callbacks.SetAnnotationTag(tagid);
   }
 
   setSelectedAnnotation(annotation) {
@@ -240,6 +240,7 @@ export default class AnnotationMenu extends Component {
   }
 
   render() {
+    console.log('menu props projectTags', this.props.projectTags);
     this.updateHiddenTagCount();
     /**
      * List of tags to be displayed under Tags tab
@@ -266,7 +267,7 @@ export default class AnnotationMenu extends Component {
                 className={classes.MenuTag}
                 key={tagid}
                 {...TagStates}
-                active={idx === this.state.selectedTag}
+                active={tagid === this.state.selectedTag}
                 rightIcon={
                   <div>
                     {this.generateTagHideIcon(tagid)}
@@ -274,7 +275,7 @@ export default class AnnotationMenu extends Component {
                   </div>
                 }
                 onClick={() => {
-                  this.setAnnotationTag(idx);
+                  this.setAnnotationTag(tagid);
                 }}
               >
                 {tagname}

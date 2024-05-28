@@ -110,7 +110,7 @@ interface AnnotatorState {
   /* Tags for Project */
   tagInfo: {
     modelHash: string | undefined;
-    tags: { [tag: string]: number } | any;
+    tags: { [tag: string]: number };
   };
   /* Changes Made Flag - For Firing Save Button Availability */
   changesMade: boolean;
@@ -218,7 +218,6 @@ export default class Annotator extends Component<
    * Current Tag is read on SetAnnotationTag. this is an unwanted side-effect but
    * Is used to overcome the unused-vars. This is still an important state though
    * so it is being kept here.
-   * Note that this is the tag index. Careful about off-by-one error
    */
   private currentTag: number;
   private menubarRef: React.RefObject<AnnotationMenu>;
@@ -522,8 +521,8 @@ export default class Annotator extends Component<
             advancedSettingsOpen: false,
           });
           if (Object.keys(this.state.tagInfo.tags).length > 0) {
-            this.currentTag = 0;
-          }
+            this.currentTag = Object.values(this.state.tagInfo.tags)[0];
+          }          
 
           (this.annotationGroup as any).tags = this.state.tagInfo.tags;
         })
@@ -676,8 +675,8 @@ export default class Annotator extends Component<
     this.setState({ userEditState: state });
   }
 
-  public setAnnotationTag(tagIndex: number): number {
-    this.currentTag = tagIndex;
+  public setAnnotationTag(id: number): number {
+    this.currentTag = id;
     return this.currentTag;
   }
 
@@ -713,6 +712,11 @@ export default class Annotator extends Component<
    * @param annotation - annotation layer to be selected
    */
   public setSelectedAnnotation(annotation: AnnotationLayer | null, editing?: boolean): void {
+    const tagId = annotation?.options?.annotationTag;
+    if (tagId != undefined) {
+      this.setAnnotationTag(tagId);
+    }
+
     this.setState(
       prevState => {
         const prevAnnotation = prevState.selectedAnnotation;
@@ -1280,7 +1284,7 @@ export default class Annotator extends Component<
   private handleCreated = (e: any) => {
     const layer = e.layer;
     const options = {
-      annotationTag: this.currentTag + 1,
+      annotationTag: this.currentTag,
       annotationID: generateID(),
       annotationAssetID: this.currentAsset.assetUrl,
       annotationType: e.layerType,
@@ -1869,13 +1873,13 @@ export default class Annotator extends Component<
    */
   public selectAnnotationTagByHash(tagHash: number): void {
     /* Find tag index */
-    const tagIndex = Object.values(this.state.tagInfo.tags).indexOf(tagHash);
-    if (tagIndex !== -1) {
+    const tagId = Object.values(this.state.tagInfo.tags).find(tagid  => tagid === tagHash);
+    if (tagId != undefined) {
       /* If target tag in project tags, set data members */
-      this.currentTag = tagIndex;
+      this.currentTag = tagId;
       /* Update menu bar */
       if (this.menubarRef.current !== null)
-        this.menubarRef.current.setAnnotationTag(tagIndex);
+        this.menubarRef.current.setAnnotationTag(tagId);
     }
   }
 
@@ -2064,7 +2068,7 @@ export default class Annotator extends Component<
           label={"Play/Pause Video"}
           onKeyDown={this.handlePlayPauseVideoOverlay}
         />
-        {Object.entries(this.state.tagInfo.tags).map(([tagname], idx) => {
+        {Object.entries(this.state.tagInfo.tags).map(([tagname, tagid], idx) => {
           /* Only Perform Hotkey for First 9 Objects */
           if (idx > 9) return;
 
@@ -2076,9 +2080,9 @@ export default class Annotator extends Component<
               combo={`${idx + 1}`}
               label={`Shortcut : ${tagname}`}
               onKeyDown={() => {
-                this.currentTag = idx as number;
+                this.currentTag = tagid;
                 if (this.menubarRef.current != null)
-                  this.menubarRef.current.setAnnotationTag(idx);
+                  this.menubarRef.current.setAnnotationTag(tagid);
               }}
             />
           );
