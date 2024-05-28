@@ -16,6 +16,7 @@ import {
   IToastProps,
   Icon,
   Intent,
+  Callout,
 } from "@blueprintjs/core";
 
 import makeEta from "simple-eta";
@@ -414,6 +415,9 @@ export default class Annotator extends Component<
     this.handleCalloutOpen = this.handleCalloutOpen.bind(
       this
     );
+    this.handleCalloutClickOutside = this.handleCalloutClickOutside.bind(
+      this
+    );
     this.handleCalloutReset = this.handleCalloutReset.bind(
       this
     );
@@ -646,6 +650,13 @@ export default class Annotator extends Component<
     this.setState(prevState => {
       return { callout: {...prevState.callout, show: true } }
     });
+  }
+
+  private handleCalloutClickOutside(e: L.LeafletMouseEvent) {
+    // const selectedAnnotation = this.getSelectedAnnotation(e);
+    // if (selectedAnnotation) {
+
+    // }
   }
 
   private handleCalloutReset() {
@@ -1422,7 +1433,7 @@ export default class Annotator extends Component<
         selectedAnnotation = this.getSelectedAnnotation(e) as AnnotationLayer | null;
         if (selectedAnnotation) {
           this.updateSelectedAnnotationCluster(selectedAnnotation);
-        }
+        } 
         return;
       default:
         return
@@ -2267,6 +2278,17 @@ export default class Annotator extends Component<
                 </div>
               ) : null}
             </Card>
+            <CalloutExtended 
+              show={this.state.callout.show}
+              icon={this.state.callout.icon} 
+              intent={this.state.callout.intent} 
+              center={this.state.callout.center}
+              onClose={this.handleCalloutReset}
+            >
+              <h4 className={`bp3-text-muted ${this.props.useDarkTheme ? "bp3-dark" : ""}`}>
+                {this.state.callout.content}
+              </h4>
+            </CalloutExtended>
           </div>
           <div className={"annotator-controls"}>
             <AnnotationMenu
@@ -2351,17 +2373,6 @@ export default class Annotator extends Component<
                 {...this.props}
               />
             ) : null}
-            <CalloutExtended 
-              show={this.state.callout.show}
-              icon={this.state.callout.icon} 
-              intent={this.state.callout.intent} 
-              center={this.state.callout.center}
-              onClose={this.handleCalloutReset}
-            >
-              <h4 className={`bp3-text-muted ${this.props.useDarkTheme ? "bp3-dark" : ""}`}>
-                {this.state.callout.content}
-              </h4>
-            </CalloutExtended>
           </div>
         </div>
       </div>

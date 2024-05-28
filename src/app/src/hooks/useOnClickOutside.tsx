@@ -3,9 +3,12 @@ import { ForwardedRef, RefObject, useEffect } from 'react';
 export const useOnClickOutside = <T extends HTMLElement = HTMLElement>(
   ref: RefObject<T> | ForwardedRef<T>,
   eventType: keyof DocumentEventMap,
-  callback: (event?: Event) => void
+  callback?: (event?: Event) => void
 ) => {
   useEffect(() => {
+    if (!callback) {
+      return;
+    }
     // Helper to get the current element from the ref
     const getRefElement = (): T | null => {
       if (ref && typeof ref !== 'function') {

@@ -10,27 +10,31 @@ interface CalloutExtendedProps extends CalloutProps {
         y: number;
     }
     onClick?: () => void;
+    onClickOutside?: () => void;
     onClose?: () => void;
 }
 
 const CalloutExtended: React.FC<CalloutExtendedProps> = forwardRef<HTMLDivElement, CalloutExtendedProps>(
     (
-        { show, center, children, onClick = () => {}, onClose = () => {}, ...restProps },
+        { show, center, children, onClick = () => {}, onClickOutside, onClose, ...restProps },
         ref
     ) => {
-        useOnClickOutside(ref, 'mouseup', onClose);     
+        console.log("🚀 ~ show:", show);
+        useOnClickOutside(ref, 'mouseup', onClickOutside);     
 
         if (!show) {
             return null;
         }
 
+        console.log("name", styles.container)
+
         return (
-            <div 
-                className={styles.container} 
-                ref={ref}
-                style={center ? { position: 'absolute', left: center.x, top: center.y, transform: 'translateX(-50%, -50%)' } : {}}
-                onClick={onClick}
-            >
+            // <div 
+            //     className={styles.container} 
+            //     ref={ref}
+            //     // style={center ? { position: 'absolute', left: center.x, top: center.y, transform: 'translateX(-50%, -50%)' } : {}}
+            //     onClick={onClick}
+            // >
                 <Callout {...restProps}>
                     {children}
                     {onClose ? (
@@ -41,7 +45,7 @@ const CalloutExtended: React.FC<CalloutExtendedProps> = forwardRef<HTMLDivElemen
                         />
                     ) : null}
                 </Callout>
-            </div>
+            // </div>
         );
     }
 );
