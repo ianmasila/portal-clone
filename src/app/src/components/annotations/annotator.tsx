@@ -64,6 +64,7 @@ import { AlertContent } from "@portal/constants/annotation";
 import { AnnotationAction } from "@portal/components/annotations/enums";
 import { NumberGenerator } from "@portal/utils/generators";
 import { generateID } from "@portal/utils/index";
+import CalloutExtended from "@portal/components/ui/callout";
 
 type Point = [number, number];
 type MapType = L.DrawMap;
@@ -181,6 +182,16 @@ interface AnnotatorState {
     icon: any;
     content: string;
   },
+  callout: {
+    show: boolean;
+    intent: Intent;
+    icon: any;
+    content: string;
+    center: {
+      x: number,
+      y: number,
+    } | undefined
+  }
   currAnnotationPlaybackId: number,
   /* Currently selected annotation */
   selectedAnnotation: AnnotationLayer | null,
@@ -306,6 +317,13 @@ export default class Annotator extends Component<
         icon: null,
         content: "",
       },
+      callout: {
+        show: false,
+        intent: Intent.NONE,
+        icon: null,
+        content: "",
+        center: undefined,
+      },
       currAnnotationPlaybackId: 0,
       selectedAnnotation: null,
       selectedAnnotationCluster: null,
@@ -388,6 +406,15 @@ export default class Annotator extends Component<
       this
     );
     this.handleAlertOpen = this.handleAlertOpen.bind(
+      this
+    );
+    this.handleCalloutClose = this.handleCalloutClose.bind(
+      this
+    );
+    this.handleCalloutOpen = this.handleCalloutOpen.bind(
+      this
+    );
+    this.handleCalloutReset = this.handleCalloutReset.bind(
       this
     );
     this.handleAnnotationOptionsMenuReset = this.handleAnnotationOptionsMenuReset.bind(
@@ -609,6 +636,32 @@ export default class Annotator extends Component<
   private handleAnnotationOptionsMenuOpen() {
     this.setState({ annotationOptionsMenuOpen: true });
   }
+
+  private handleCalloutClose() {
+    this.setState(prevState => {
+      return { callout: {...prevState.callout, show: false } }
+    });
+  }
+  private handleCalloutOpen() {
+    this.setState(prevState => {
+      return { callout: {...prevState.callout, show: true } }
+    });
+  }
+
+  private handleCalloutReset() {
+    this.setState(prevState => {
+      return { 
+        callout: {
+          show: false,
+          intent: Intent.NONE,
+          icon: null,
+          content: "",
+          center: undefined,
+        }
+      }
+    });
+  }
+
   private handleAnnotationOptionsMenuReset() {
     this.setState({ 
       annotationOptionsMenuOpen: false,
@@ -1334,9 +1387,7 @@ export default class Annotator extends Component<
 
   private handleMouseDown = (e: L.LeafletMouseEvent) => {
     console.log('annotation action bef', this.annotationAction);
-
     // console.log("🚀 ~ handleMouseDown e:", e)
-    // TODO: If shift is pressed, do: this.annotationAction = AnnotationAction.GROUP
     switch (this.annotationAction) {
       case AnnotationAction.SELECT:
       case AnnotationAction.GROUP:
@@ -1350,7 +1401,6 @@ export default class Annotator extends Component<
   
   private handleMouseUp = (e: L.LeafletMouseEvent) => {
     console.log("🚀 ~ handleMouseUp:", e)
-    // TODO: If the click is within a small distance from any annotation, select that annotation
     switch (this.annotationAction) {
       case AnnotationAction.SELECT:
         /* Select annotation */ 
@@ -1455,8 +1505,16 @@ export default class Annotator extends Component<
       }
     })
 
-    // TODO: Update info component
-
+    // TODO: Center info component
+    this.setState(prevState => {
+      return {
+        callout: {
+          ...prevState.callout, 
+          show: true,
+          content: `You have selected ${prevState.selectedAnnotationCluster?.annotations.length} annotations` 
+         }
+      }
+    })
   }
 
   /* Commit the currently selected annotations cluster as a group */
@@ -2293,6 +2351,17 @@ export default class Annotator extends Component<
                 {...this.props}
               />
             ) : null}
+            <CalloutExtended 
+              show={this.state.callout.show}
+              icon={this.state.callout.icon} 
+              intent={this.state.callout.intent} 
+              center={this.state.callout.center}
+              onClose={this.handleCalloutReset}
+            >
+              <h4 className={`bp3-text-muted ${this.props.useDarkTheme ? "bp3-dark" : ""}`}>
+                {this.state.callout.content}
+              </h4>
+            </CalloutExtended>
           </div>
         </div>
       </div>

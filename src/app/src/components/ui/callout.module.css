@@ -1,0 +1,12 @@
+.container {
+    position: relative;
+}
+
+.rightIcon {
+    position: absolute;
+    right: 10px;
+    /* Adjust as needed */
+    top: 50%;
+    transform: translateY(-50%);
+    cursor: pointer;
+}
