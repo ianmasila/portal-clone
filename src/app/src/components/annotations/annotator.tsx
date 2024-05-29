@@ -200,6 +200,7 @@ interface AnnotatorState {
   /* Currently selected annotations clustered up into a unit */
   selectedAnnotationCluster: AnnotationCluster | null;
   groupedAnnotations: AnnotationCluster[];
+  selectedGroupedAnnotations: AnnotationCluster | null;
 }
 
 /**
@@ -334,6 +335,7 @@ export default class Annotator extends Component<
       selectedAnnotation: null,
       selectedAnnotationCluster: null,
       groupedAnnotations: [],
+      selectedGroupedAnnotations: null,
     };
 
     this.hotkeyToGroup = 'Shift';
@@ -440,6 +442,8 @@ export default class Annotator extends Component<
       this
     );
     this.handleGroupAnnotations = this.handleGroupAnnotations.bind(this);
+    this.setSelectedAnnotation = this.setSelectedAnnotation.bind(this);
+    this.setSelectedAnnotationGroup = this.setSelectedAnnotationGroup.bind(this);
   }
 
   async componentDidMount(): Promise<void> {
@@ -1434,23 +1438,6 @@ export default class Annotator extends Component<
         /* Select annotation */ 
         let selectedAnnotation = this.getSelectedAnnotation(e) as AnnotationLayer | null;
         if (selectedAnnotation) {
-          // TODO: If part of a group, highlight all group members
-
-          const group = this.state.groupedAnnotations.find(cluster => 
-            cluster.annotations.some(annotation => annotation === selectedAnnotation)
-          )
-          if (group) {
-            // Show group members
-            // this.annotationGroup.eachLayer(annotation => {
-            //   if (group.annotations.includes(annotation as AnnotationLayer)) {
-            //     this.highlightAnnotation(annotation as AnnotationLayer);
-            //   }
-            // })
-            group.annotations.forEach(annotation => {
-              this.highlightAnnotation(annotation);
-            })
-          }
-
           this.setSelectedAnnotation(selectedAnnotation as AnnotationLayer, true);
         } else {
           this.setSelectedAnnotation(null);
@@ -1548,12 +1535,20 @@ export default class Annotator extends Component<
           prevAnnotation.editing.disable();
           prevAnnotation.fire("mouseout");
         }
+
         if (annotation) {
+          const group = this.state.groupedAnnotations.find(cluster => 
+            cluster.annotations.some(item => item === annotation)
+          )
+          this.setSelectedAnnotationGroup(group ?? null);
           this.highlightAnnotation(annotation);
           if (editing) {
             annotation.editing?.enable();
           }
+        } else {
+          this.setSelectedAnnotationGroup(null);
         }
+
         /* Update selected annotation on menubar */
         if (this.menubarRef.current !== null) {
           this.menubarRef.current.setSelectedAnnotation(annotation);
@@ -1569,10 +1564,46 @@ export default class Annotator extends Component<
     }
   }
 
+  public setSelectedAnnotationGroup(group: AnnotationCluster | null): void {
+    this.setState(prevState => {
+      if (group !== this.state.selectedGroupedAnnotations) {
+        prevState.selectedGroupedAnnotations?.annotations.forEach(annotation => {
+          this.highlightAnnotation(annotation, false);
+        })
+      }
+      group?.annotations.forEach(annotation => {
+        this.highlightAnnotation(annotation);
+      });
+
+      return {
+        selectedGroupedAnnotations: group
+      }
+    })
+  }
+
   private updateSelectedAnnotationCluster = (annotation: AnnotationLayer) => {
     const currentClusterAnnotations = this.state.selectedAnnotationCluster?.annotations; 
     let updatedClusterAnnotations = currentClusterAnnotations?.slice() ?? [];
-    // TODO: IF BELONGS TO ANOTHER GROUP OF DIFFERENT TAG, WARN
+
+    const isSameTag = !currentClusterAnnotations?.length || 
+      annotation.options.annotationTag === currentClusterAnnotations[0].options.annotationTag;
+
+    if (!isSameTag) {
+      console.log('no group. different tags');
+      this.updateCallout({
+        content: 
+          <span style={{ display: 'flex', alignItems: 'center' }}>
+            <h4 className={`bp3-text-muted ${this.props.useDarkTheme ? "bp3-dark" : ""}`} style={{ margin: 0 }}>
+              You may only select annotations of the same tag
+            </h4>
+            <Button icon="group-objects" text="Group" minimal small 
+              onClick={(_) => this.handleGroupAnnotations('accept')} 
+              disabled={!this.state.selectedAnnotationCluster?.annotations.length}
+            />
+          </span>
+      })
+      return;
+    } 
 
     if (currentClusterAnnotations?.includes(annotation)) {
       // Remove annotation from cluster
@@ -1623,18 +1654,6 @@ export default class Annotator extends Component<
     switch (type) {
       case 'accept':
         const currentAnnotationCluster = this.state.selectedAnnotationCluster;
-        // Check that all annotations are of the same tag
-        const hasDifferentTags = currentAnnotationCluster?.annotations.some((annotation, i, arr) => {
-          if (i === 0) {
-            return false;
-          } else {
-            return annotation.options.annotationTag !== arr[i-1].options.annotationTag
-          }
-        })
-        if (hasDifferentTags) {
-          console.log('no group. different tags');
-        }
-
         if (currentAnnotationCluster) {
           console.log('grouped.')
           this.setState(prevState => {
