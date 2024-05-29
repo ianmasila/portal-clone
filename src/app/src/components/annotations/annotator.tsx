@@ -16,7 +16,6 @@ import {
   IToastProps,
   Icon,
   Intent,
-  Callout,
 } from "@blueprintjs/core";
 
 import makeEta from "simple-eta";
@@ -33,6 +32,7 @@ import {
   AnnotationCluster,
   AnnotationLayer,
   PolylineObjectType,
+  UserResponse,
 } from "@portal/components/annotations/types";
 
 import {
@@ -65,8 +65,7 @@ import { AlertContent, PrimitiveShapeOptions } from "@portal/constants/annotatio
 import { AnnotationAction } from "@portal/components/annotations/enums";
 import { NumberGenerator } from "@portal/utils/generators";
 import { generateID } from "@portal/utils/index";
-import CalloutExtended from "@portal/components/ui/callout";
-import CardNotification from "../ui/cardnotification";
+import CardNotification from "@portal/components/ui/cardnotification";
 
 type Point = [number, number];
 type MapType = L.DrawMap;
@@ -193,6 +192,7 @@ interface AnnotatorState {
       x: number,
       y: number,
     } | undefined
+    onClose: () => void;
   }
   currAnnotationPlaybackId: number,
   /* Currently selected annotation */
@@ -263,6 +263,9 @@ export default class Annotator extends Component<
   public endPoint: Point | null;
   public annotationAction: AnnotationAction;
 
+  /* Keyboard activity */
+  public hotkeyToGroup: string;
+
   /* Iterator whose next function gives the next tag id, simply incremented */
   public tagIdGenerator: NumberGenerator;
 
@@ -323,8 +326,9 @@ export default class Annotator extends Component<
         show: false,
         intent: Intent.NONE,
         icon: null,
-        content: "",
+        content: null,
         center: undefined,
+        onClose: this.resetCallout,
       },
       currAnnotationPlaybackId: 0,
       selectedAnnotation: null,
@@ -332,6 +336,7 @@ export default class Annotator extends Component<
       groupedAnnotations: [],
     };
 
+    this.hotkeyToGroup = 'Shift';
     this.tagIdGenerator = new NumberGenerator();
 
     this.toaster = new Toaster({}, {});
@@ -389,63 +394,35 @@ export default class Annotator extends Component<
     this.switchAnnotation = this.switchAnnotation.bind(this);
     this.handleFileManagementOpen = this.handleFileManagementOpen.bind(this);
     this.handleFileManagementClose = this.handleFileManagementClose.bind(this);
-    this.handleAdvancedSettingsOpen = this.handleAdvancedSettingsOpen.bind(
-      this
-    );
-    this.handleAdvancedSettingsClose = this.handleAdvancedSettingsClose.bind(
-      this
-    );
-    this.handleAnnotationOptionsMenuOpen = this.handleAnnotationOptionsMenuOpen.bind(
-      this
-    );
-    this.handleAnnotationOptionsMenuClose = this.handleAnnotationOptionsMenuClose.bind(
-      this
-    );
-    this.handleAnnotationOptionsMenuSelection = this.handleAnnotationOptionsMenuSelection.bind(
-      this
-    );
-    this.handleAlertClose = this.handleAlertClose.bind(
-      this
-    );
-    this.handleAlertOpen = this.handleAlertOpen.bind(
-      this
-    );
-    this.handleCalloutClose = this.handleCalloutClose.bind(
-      this
-    );
-    this.handleCalloutOpen = this.handleCalloutOpen.bind(
-      this
-    );
-    this.handleCalloutClickOutside = this.handleCalloutClickOutside.bind(
-      this
-    );
-    this.handleCalloutReset = this.handleCalloutReset.bind(
-      this
-    );
-    this.handleAnnotationOptionsMenuReset = this.handleAnnotationOptionsMenuReset.bind(
-      this
-    );
-    this.handlePlayPauseVideoOverlay = this.handlePlayPauseVideoOverlay.bind(
-      this
-    );
+    this.handleAdvancedSettingsOpen = this.handleAdvancedSettingsOpen.bind(this);
+    this.handleAdvancedSettingsClose = this.handleAdvancedSettingsClose.bind(this);
+    this.handleAnnotationOptionsMenuOpen = this.handleAnnotationOptionsMenuOpen.bind(this);
+    this.handleAnnotationOptionsMenuClose = this.handleAnnotationOptionsMenuClose.bind(this);
+    this.handleAnnotationOptionsMenuSelection = this.handleAnnotationOptionsMenuSelection.bind(this);
+    this.handleAlertClose = this.handleAlertClose.bind(this);
+    this.handleAlertOpen = this.handleAlertOpen.bind(this);
+    this.handleCalloutClose = this.handleCalloutClose.bind(this);
+    this.handleCalloutOpen = this.handleCalloutOpen.bind(this);
+    this.handleCalloutClickOutside = this.handleCalloutClickOutside.bind(this);
+    this.updateCallout = this.updateCallout.bind(this);
+    this.resetCallout = this.resetCallout.bind(this);
+    this.resetSelectedAnnotationCluster = this.resetSelectedAnnotationCluster.bind(this); 
+    this.handleAnnotationOptionsMenuReset = this.handleAnnotationOptionsMenuReset.bind(this);
+    this.handlePlayPauseVideoOverlay = this.handlePlayPauseVideoOverlay.bind(this);
     this.updateImage = this.updateImage.bind(this);
 
     this.setAnnotationVisibility = this.setAnnotationVisibility.bind(this);
-    this.setAllAnnotationVisibility = this.setAllAnnotationVisibility.bind(
-      this
-    );
-    this.filterAnnotationVisibility = this.filterAnnotationVisibility.bind(
-      this
-    );
-    this.bindAnnotationTooltip = this.bindAnnotationTooltip.bind(
-      this
-    );
+    this.setAllAnnotationVisibility = this.setAllAnnotationVisibility.bind(this);
+    this.filterAnnotationVisibility = this.filterAnnotationVisibility.bind(this);
+    this.bindAnnotationTooltip = this.bindAnnotationTooltip.bind(this);
     this.setAnnotationOptions = this.setAnnotationOptions.bind(this);
     this.toggleShowSelected = this.toggleShowSelected.bind(this);
     this.setAnnotatedAssetsHidden = this.setAnnotatedAssetsHidden.bind(this);
-    this.intersectAnnotations = this.intersectAnnotations.bind(
-      this
-    );
+    this.intersectAnnotations = this.intersectAnnotations.bind(this);
+
+    this.handleKeyDownGroup = this.handleKeyDownGroup.bind(this);
+    this.handleKeyUpGroup = this.handleKeyUpGroup.bind(this);
+    this.handleKeyUpShift = this.handleKeyUpShift.bind(this);
 
     this.handleMouseDown = this.handleMouseDown.bind(this);
     this.handleMouseUp = this.handleMouseUp.bind(this);
@@ -462,9 +439,7 @@ export default class Annotator extends Component<
     this.updateSelectedAnnotationCluster = this.updateSelectedAnnotationCluster.bind(
       this
     );
-    this.handleGroupAnnotations = this.handleGroupAnnotations.bind(
-      this
-    );
+    this.handleGroupAnnotations = this.handleGroupAnnotations.bind(this);
   }
 
   async componentDidMount(): Promise<void> {
@@ -530,6 +505,8 @@ export default class Annotator extends Component<
 
     /* Slight delay so that all images can be reliably fetched from the server */
     setTimeout(() => this.updateImage(), 200);
+
+    window.addEventListener('keyup', this.handleKeyUpShift);
   }
 
   // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
@@ -612,6 +589,8 @@ export default class Annotator extends Component<
     this.map.off(L.Draw.Event.EDITRESIZE, this.handleEditResize);
     this.map.off(L.Draw.Event.EDITVERTEX, this.handleEditVertex);
     this.map.off(L.Draw.Event.EDITMOVE, this.handleEditMove);
+
+    window.removeEventListener('keyup', this.handleKeyUpShift);
   }
 
   private handlePlayPauseVideoOverlay() {
@@ -660,16 +639,26 @@ export default class Annotator extends Component<
     // }
   }
 
-  private handleCalloutReset() {
+  private updateCallout = (options: Partial<AnnotatorState['callout']>) => {
     this.setState(prevState => {
-      return { 
+      return {
         callout: {
-          show: false,
-          intent: Intent.NONE,
-          icon: null,
-          content: "",
-          center: undefined,
+          ...prevState.callout, 
+          ...options,
         }
+      }
+    })
+  }
+
+  private resetCallout() {
+    this.setState({ 
+      callout: {
+        show: false,
+        intent: Intent.NONE,
+        icon: null,
+        content: "",
+        center: undefined,
+        onClose: this.resetCallout
       }
     });
   }
@@ -1397,12 +1386,60 @@ export default class Annotator extends Component<
     this.annotationAction = AnnotationAction.EDIT;
   };
 
+  /**
+   * @param e 
+   * Handle keydown event of hotkey for grouping annotations
+   */
+  private handleKeyDownGroup = (e: KeyboardEvent) => {
+    console.log('shift key down');
+    if (this.annotationAction === AnnotationAction.WAITIING) {
+      return;
+    }
+    this.annotationAction = AnnotationAction.GROUP;
+    this.setSelectedAnnotation(null);
+    this.updateCallout({
+      onClose: () => this.handleGroupAnnotations('cancel')
+    })
+  }
+
+  /**
+   * @param e 
+   * Handle keyup event of hotkey for grouping annotations
+   */
+  private handleKeyUpGroup = (e: KeyboardEvent) => {
+    if (this.annotationAction === AnnotationAction.WAITIING) {
+      return;
+    }
+    console.log('shift key up');
+    if (this.state.callout.show) {
+      this.annotationAction = AnnotationAction.WAITIING;
+      return;
+    } 
+
+    this.annotationAction = AnnotationAction.SELECT;
+  }
+
+  /**
+   * @param e {KeyboardEvent} 
+   * Hotkeying Shift does not fire Hotkey onKeyUp event hence the need to listen for it with the window
+   * @returns 
+   */
+  private handleKeyUpShift = (e: KeyboardEvent) => {
+    if (e.key !== 'Shift') {
+      return;
+    }
+    if (this.hotkeyToGroup === 'Shift' && this.annotationAction === AnnotationAction.GROUP) {
+      this.handleKeyUpGroup(e);
+    }
+  }
+
   private handleMouseDown = (e: L.LeafletMouseEvent) => {
-    console.log('annotation action bef', this.annotationAction);
+    console.log('annotation action on mouse down', this.annotationAction);
     // console.log("🚀 ~ handleMouseDown e:", e)
     switch (this.annotationAction) {
       case AnnotationAction.SELECT:
       case AnnotationAction.GROUP:
+      case AnnotationAction.WAITIING:
         return;
       case AnnotationAction.UNDETERMINED:
       default:
@@ -1513,7 +1550,7 @@ export default class Annotator extends Component<
       updatedClusterAnnotations = updatedClusterAnnotations?.filter(item => item !== annotation);
     } else {
       annotation.options.fillOpacity = 0.7;
-      annotation.options.weight = annotation.options.weight*2; 
+      annotation.options.weight = annotation.options.weight*3; 
       updatedClusterAnnotations.push(annotation);
     }
   
@@ -1529,47 +1566,62 @@ export default class Annotator extends Component<
     })
 
     // TODO: Center info component
-    this.setState(prevState => {
-      return {
-        callout: {
-          ...prevState.callout, 
-          show: true,
-          content: 
-            <span>
-              <h4 className={`bp3-text-muted ${this.props.useDarkTheme ? "bp3-dark" : ""}`}>
-                You have selected {prevState.selectedAnnotationCluster?.annotations.length} annotations 
-              </h4>
-              <Button icon="group-objects" text="Group" onClick={this.handleGroupAnnotations} />
-            </span>
-        }
-      }
+    this.updateCallout({
+      show: true,
+      content: 
+        <span style={{ display: 'flex', alignItems: 'center' }}>
+          <h4 className={`bp3-text-muted ${this.props.useDarkTheme ? "bp3-dark" : ""}`} style={{ margin: 0 }}>
+            You have selected {this.state.selectedAnnotationCluster?.annotations.length} annotations
+          </h4>
+          <Button icon="group-objects" text="Group" minimal small 
+            onClick={(_) => this.handleGroupAnnotations('accept')} 
+            disabled={!this.state.selectedAnnotationCluster?.annotations.length}
+            />
+        </span>
     })
   }
 
-  /* Commit the currently selected annotations cluster as a group */
-  private handleGroupAnnotations = () => {
-    const currentAnnotationCluster = this.state.selectedAnnotationCluster;
-    // Check that all annotations are of the same tag
-    const hasDifferentTags = currentAnnotationCluster?.annotations.some((annotation, i, arr) => {
-      if (i === 0) {
-        return false;
-      } else {
-        return annotation.options.annotationTag !== arr[i-1].options.annotationTag
-      }
+  private resetSelectedAnnotationCluster = () => {
+    // Unhighlight selected annotations
+    this.state.selectedAnnotationCluster?.annotations.forEach(annotation => {
+      annotation.options.fillOpacity = PrimitiveShapeOptions.fillOpacity;
+      annotation.options.weight = PrimitiveShapeOptions.weight;
     })
-    if (hasDifferentTags) {
-      console.log('no group. different tags');
-      return;
-    }
+    this.setState({ selectedAnnotationCluster: null });
+  }
 
-    if (currentAnnotationCluster) {
-      console.log('grouped.')
-      this.setState(prevState => {
-        const newGroupedAnnotations = prevState.groupedAnnotations.slice();
-        newGroupedAnnotations.push(currentAnnotationCluster);
+  /* Commit the currently selected annotations cluster as a group */
+  private handleGroupAnnotations = (type: UserResponse) => {
+    switch (type) {
+      case 'accept':
+        const currentAnnotationCluster = this.state.selectedAnnotationCluster;
+        // Check that all annotations are of the same tag
+        const hasDifferentTags = currentAnnotationCluster?.annotations.some((annotation, i, arr) => {
+          if (i === 0) {
+            return false;
+          } else {
+            return annotation.options.annotationTag !== arr[i-1].options.annotationTag
+          }
+        })
+        if (hasDifferentTags) {
+          console.log('no group. different tags');
+          return;
+        }
 
-        return { groupedAnnotations: newGroupedAnnotations }
-      })
+        if (currentAnnotationCluster) {
+          console.log('grouped.')
+          this.setState(prevState => {
+            const newGroupedAnnotations = prevState.groupedAnnotations.slice();
+            newGroupedAnnotations.push(currentAnnotationCluster);
+
+            return { groupedAnnotations: newGroupedAnnotations }
+          })
+        }
+      default:
+        this.resetSelectedAnnotationCluster();
+        this.resetCallout();
+        this.annotationAction = AnnotationAction.SELECT;
+        return;
     }
   }
 
@@ -2170,17 +2222,10 @@ export default class Annotator extends Component<
         />
         <Hotkey
           global={true}
-          combo={"shift"}
+          combo={this.hotkeyToGroup}
           label={"Group anotations"}
-          onKeyDown={() => {
-            console.log('shift key down');
-            this.annotationAction = AnnotationAction.GROUP
-          }}
-          onKeyUp={() => {
-            // FIXME: THIS IS NOT CALLED
-            console.log('shift key up');
-            this.annotationAction = AnnotationAction.UNDETERMINED
-          }}
+          onKeyDown={this.handleKeyDownGroup}
+          onKeyUp={this.handleKeyUpGroup}
           preventDefault={true}
           stopPropagation={true}
         />
@@ -2298,11 +2343,9 @@ export default class Annotator extends Component<
               <CardNotification
                 show={this.state.callout.show}
                 center={this.state.callout.center}
-                onClose={this.handleCalloutReset}
+                onClose={this.state.callout.onClose}
               >
-                  <h4 className={`bp3-text-muted ${this.props.useDarkTheme ? "bp3-dark" : ""}`}>
-                    You have selected {this.state.selectedAnnotationCluster?.annotations.length} annotations 
-                  </h4>
+                {this.state.callout.content}
               </CardNotification>
             </Card>
           </div>

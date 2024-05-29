@@ -19,7 +19,6 @@ const CalloutExtended: React.FC<CalloutExtendedProps> = forwardRef<HTMLDivElemen
         { show, center, children, onClick = () => {}, onClickOutside, onClose, ...restProps },
         ref
     ) => {
-        console.log("🚀 ~ show:", show);
         useOnClickOutside(ref, 'mouseup', onClickOutside);     
 
         if (!show) {
