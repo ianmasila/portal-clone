@@ -33,7 +33,7 @@ const CardNotification: React.FC<CardNotificationProps> = forwardRef<HTMLDivElem
                 style={center ? { left: center.x, top: center.y, transform: 'translate(-50%, -50%)' } : {}}
                 onClick={onClick}
             >
-                <Card className={styles.card} {...restProps}>
+                <Card {...restProps} className={styles.card}>
                     {children}
                     {onClose ? (
                         <Icon

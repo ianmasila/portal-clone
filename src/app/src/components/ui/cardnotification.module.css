@@ -15,8 +15,10 @@
 }
 
 .card {
-    padding: 0.5rem 1rem 0.5rem 1rem;
-    /* p-2 pr-4 pl-4 */
+    padding: 0.25rem 0.5rem;
+    /* Compact padding */
+    margin: 0;
+    /* Remove margin */
     gap: 0.5rem;
     /* gap-2 */
     display: flex;
@@ -27,6 +29,10 @@
     /* fadeIn */
     box-shadow: 0 1px 1px rgba(0, 0, 0, 0.2), 0 2px 2px rgba(0, 0, 0, 0.14), 0 3px 3px rgba(0, 0, 0, 0.12);
     /* bp3-elevation-3 */
+    height: 2rem;
+    /* Set a smaller height */
+    line-height: 1rem;
+    /* Adjust line-height if needed */
 }
 
 .rightIcon {

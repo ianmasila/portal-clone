@@ -66,6 +66,7 @@ import { AnnotationAction } from "@portal/components/annotations/enums";
 import { NumberGenerator } from "@portal/utils/generators";
 import { generateID } from "@portal/utils/index";
 import CalloutExtended from "@portal/components/ui/callout";
+import CardNotification from "../ui/cardnotification";
 
 type Point = [number, number];
 type MapType = L.DrawMap;
@@ -187,7 +188,7 @@ interface AnnotatorState {
     show: boolean;
     intent: Intent;
     icon: any;
-    content: string;
+    content: React.ReactNode;
     center: {
       x: number,
       y: number,
@@ -1533,8 +1534,14 @@ export default class Annotator extends Component<
         callout: {
           ...prevState.callout, 
           show: true,
-          content: `You have selected ${prevState.selectedAnnotationCluster?.annotations.length} annotations` 
-         }
+          content: 
+            <span>
+              <h4 className={`bp3-text-muted ${this.props.useDarkTheme ? "bp3-dark" : ""}`}>
+                You have selected {prevState.selectedAnnotationCluster?.annotations.length} annotations 
+              </h4>
+              <Button icon="group-objects" text="Group" onClick={this.handleGroupAnnotations} />
+            </span>
+        }
       }
     })
   }
@@ -2288,18 +2295,15 @@ export default class Annotator extends Component<
                   />
                 </div>
               ) : null}
-              <CalloutExtended 
+              <CardNotification
                 show={this.state.callout.show}
-                icon={this.state.callout.icon} 
-                intent={this.state.callout.intent} 
                 center={this.state.callout.center}
                 onClose={this.handleCalloutReset}
               >
-                <h4 className={`bp3-text-muted ${this.props.useDarkTheme ? "bp3-dark" : ""}`}>
-                  {this.state.callout.content}
-                  
-                </h4>
-              </CalloutExtended>
+                  <h4 className={`bp3-text-muted ${this.props.useDarkTheme ? "bp3-dark" : ""}`}>
+                    You have selected {this.state.selectedAnnotationCluster?.annotations.length} annotations 
+                  </h4>
+              </CardNotification>
             </Card>
           </div>
           <div className={"annotator-controls"}>
