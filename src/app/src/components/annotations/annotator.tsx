@@ -61,7 +61,7 @@ import FormatTimerSeconds from "./utils/timer";
 import { RegisteredModel } from "./model";
 
 import AnnotationOptionsMenu from "./annotationoptionsmenu";
-import { AlertContent } from "@portal/constants/annotation";
+import { AlertContent, PrimitiveShapeOptions } from "@portal/constants/annotation";
 import { AnnotationAction } from "@portal/components/annotations/enums";
 import { NumberGenerator } from "@portal/utils/generators";
 import { generateID } from "@portal/utils/index";
@@ -1417,6 +1417,7 @@ export default class Annotator extends Component<
         /* Select annotation */ 
         let selectedAnnotation = this.getSelectedAnnotation(e) as AnnotationLayer | null;
         if (selectedAnnotation) {
+          // TODO: If part of a group, highlight all group members
           this.setSelectedAnnotation(selectedAnnotation as AnnotationLayer, true);
         } else {
           this.setSelectedAnnotation(null);
@@ -1502,10 +1503,20 @@ export default class Annotator extends Component<
   }
 
   private updateSelectedAnnotationCluster = (annotation: AnnotationLayer) => {
-    annotation.options.fillOpacity = 0.7;
-    this.setState(prevState => {
-      const updatedClusterAnnotations = prevState.selectedAnnotationCluster?.annotations?.slice() ?? [];
+    const currentClusterAnnotations = this.state.selectedAnnotationCluster?.annotations; 
+    let updatedClusterAnnotations = currentClusterAnnotations?.slice() ?? [];
+    if (currentClusterAnnotations?.includes(annotation)) {
+      // Remove annotation from cluster
+      annotation.options.fillOpacity = PrimitiveShapeOptions.fillOpacity;
+      annotation.options.weight = PrimitiveShapeOptions.weight;
+      updatedClusterAnnotations = updatedClusterAnnotations?.filter(item => item !== annotation);
+    } else {
+      annotation.options.fillOpacity = 0.7;
+      annotation.options.weight = annotation.options.weight*2; 
       updatedClusterAnnotations.push(annotation);
+    }
+  
+    this.setState(prevState => {
       const updatedCluster = {
         ...prevState.selectedAnnotationCluster, 
         annotations: updatedClusterAnnotations
@@ -2277,18 +2288,19 @@ export default class Annotator extends Component<
                   />
                 </div>
               ) : null}
+              <CalloutExtended 
+                show={this.state.callout.show}
+                icon={this.state.callout.icon} 
+                intent={this.state.callout.intent} 
+                center={this.state.callout.center}
+                onClose={this.handleCalloutReset}
+              >
+                <h4 className={`bp3-text-muted ${this.props.useDarkTheme ? "bp3-dark" : ""}`}>
+                  {this.state.callout.content}
+                  
+                </h4>
+              </CalloutExtended>
             </Card>
-            <CalloutExtended 
-              show={this.state.callout.show}
-              icon={this.state.callout.icon} 
-              intent={this.state.callout.intent} 
-              center={this.state.callout.center}
-              onClose={this.handleCalloutReset}
-            >
-              <h4 className={`bp3-text-muted ${this.props.useDarkTheme ? "bp3-dark" : ""}`}>
-                {this.state.callout.content}
-              </h4>
-            </CalloutExtended>
           </div>
           <div className={"annotator-controls"}>
             <AnnotationMenu

@@ -1,9 +1,9 @@
 import React, { forwardRef } from 'react';
 import { Card, CardProps, Icon } from "@blueprintjs/core";
 import { useOnClickOutside } from '../../hooks/useOnClickOutside';
-import styles from './callout.module.css';
+import styles from './cardnotification.module.css';
 
-interface CalloutExtendedProps extends CardProps {
+interface CardNotificationProps extends CardProps {
     show: boolean;
     center?: {
         x: number;
@@ -14,7 +14,7 @@ interface CalloutExtendedProps extends CardProps {
     onClose?: () => void;
 }
 
-const CalloutExtended: React.FC<CalloutExtendedProps> = forwardRef<HTMLDivElement, CalloutExtendedProps>(
+const CardNotification: React.FC<CardNotificationProps> = forwardRef<HTMLDivElement, CardNotificationProps>(
     (
         { show, center, children, onClick = () => {}, onClickOutside, onClose, ...restProps },
         ref
@@ -33,7 +33,7 @@ const CalloutExtended: React.FC<CalloutExtendedProps> = forwardRef<HTMLDivElemen
                 style={center ? { left: center.x, top: center.y, transform: 'translate(-50%, -50%)' } : {}}
                 onClick={onClick}
             >
-                <Card {...restProps} className={styles.callout}>
+                <Card className={styles.card} {...restProps}>
                     {children}
                     {onClose ? (
                         <Icon
@@ -48,4 +48,4 @@ const CalloutExtended: React.FC<CalloutExtendedProps> = forwardRef<HTMLDivElemen
     }
 );
 
-export default CalloutExtended;
+export default CardNotification;
