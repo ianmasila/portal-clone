@@ -759,40 +759,6 @@ export default class Annotator extends Component<
   }
 
   /**
-   * Set selected annotation to new annotation
-   * @param annotation - annotation layer to be selected
-   */
-  public setSelectedAnnotation(annotation: AnnotationLayer | null, editing?: boolean): void {
-    this.setState(
-      prevState => {
-        const prevAnnotation = prevState.selectedAnnotation;
-        if (prevAnnotation) {
-          this.highlightAnnotation(prevAnnotation, false);
-          prevAnnotation.editing.disable();
-          prevAnnotation.fire("mouseout");
-        }
-        if (annotation) {
-          this.highlightAnnotation(annotation);
-          if (editing) {
-            annotation.editing?.enable();
-          }
-        }
-        /* Update selected annotation on menubar */
-        if (this.menubarRef.current !== null) {
-          this.menubarRef.current.setSelectedAnnotation(annotation);
-        }
-
-        return { selectedAnnotation: annotation };
-      }
-    )
-    
-    const tagId = annotation?.options?.annotationTag;
-    if (tagId != undefined) {
-      this.setAnnotationTag(tagId);
-    }
-  }
-
-  /**
    * Show or hide a list of annotations.
    * @param visible - set true to show annotations, false to hide annotations
    * @param annotationList -  list of target annotations
@@ -1361,10 +1327,18 @@ export default class Annotator extends Component<
   private highlightAnnotation = (annotation: AnnotationLayer, enable: boolean = true) => {
     if (enable) {
       annotation.options.fillOpacity = 0.7;
-      annotation.options.weight = PrimitiveShapeOptions.weight*3; 
+      annotation.options.weight = PrimitiveShapeOptions.weight*1.2; 
     } else {
       annotation.options.fillOpacity = PrimitiveShapeOptions.fillOpacity;
       annotation.options.weight = PrimitiveShapeOptions.weight; 
+    }
+
+    // Force a redraw of the annotation
+    if ((annotation as any).setStyle) {
+      (annotation as any).setStyle({
+        fillOpacity: annotation.options.fillOpacity,
+        weight: annotation.options.weight,
+      });
     }
   }
 
@@ -1467,6 +1441,11 @@ export default class Annotator extends Component<
           )
           if (group) {
             // Show group members
+            // this.annotationGroup.eachLayer(annotation => {
+            //   if (group.annotations.includes(annotation as AnnotationLayer)) {
+            //     this.highlightAnnotation(annotation as AnnotationLayer);
+            //   }
+            // })
             group.annotations.forEach(annotation => {
               this.highlightAnnotation(annotation);
             })
@@ -1556,6 +1535,40 @@ export default class Annotator extends Component<
     return selectedAnnotation ?? null;
   }
 
+  /**
+   * Set selected annotation to new annotation
+   * @param annotation - annotation layer to be selected
+   */
+  public setSelectedAnnotation(annotation: AnnotationLayer | null, editing?: boolean): void {
+    this.setState(
+      prevState => {
+        const prevAnnotation = prevState.selectedAnnotation;
+        if (prevAnnotation) {
+          this.highlightAnnotation(prevAnnotation, false);
+          prevAnnotation.editing.disable();
+          prevAnnotation.fire("mouseout");
+        }
+        if (annotation) {
+          this.highlightAnnotation(annotation);
+          if (editing) {
+            annotation.editing?.enable();
+          }
+        }
+        /* Update selected annotation on menubar */
+        if (this.menubarRef.current !== null) {
+          this.menubarRef.current.setSelectedAnnotation(annotation);
+        }
+
+        return { selectedAnnotation: annotation };
+      }
+    )
+    
+    const tagId = annotation?.options?.annotationTag;
+    if (tagId != undefined) {
+      this.setAnnotationTag(tagId);
+    }
+  }
+
   private updateSelectedAnnotationCluster = (annotation: AnnotationLayer) => {
     const currentClusterAnnotations = this.state.selectedAnnotationCluster?.annotations; 
     let updatedClusterAnnotations = currentClusterAnnotations?.slice() ?? [];
@@ -1620,7 +1633,6 @@ export default class Annotator extends Component<
         })
         if (hasDifferentTags) {
           console.log('no group. different tags');
-          return;
         }
 
         if (currentAnnotationCluster) {
