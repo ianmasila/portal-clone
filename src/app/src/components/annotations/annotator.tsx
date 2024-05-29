@@ -767,12 +767,12 @@ export default class Annotator extends Component<
       prevState => {
         const prevAnnotation = prevState.selectedAnnotation;
         if (prevAnnotation) {
-          prevAnnotation.options.fillOpacity = 0.35;
+          this.highlightAnnotation(prevAnnotation, false);
           prevAnnotation.editing.disable();
           prevAnnotation.fire("mouseout");
         }
         if (annotation) {
-          annotation.options.fillOpacity = 0.7;
+          this.highlightAnnotation(annotation);
           if (editing) {
             annotation.editing?.enable();
           }
@@ -1358,6 +1358,16 @@ export default class Annotator extends Component<
     this.bindAnnotationTooltip(layerWithListeners);
   }
 
+  private highlightAnnotation = (annotation: AnnotationLayer, enable: boolean = true) => {
+    if (enable) {
+      annotation.options.fillOpacity = 0.7;
+      annotation.options.weight = PrimitiveShapeOptions.weight*3; 
+    } else {
+      annotation.options.fillOpacity = PrimitiveShapeOptions.fillOpacity;
+      annotation.options.weight = PrimitiveShapeOptions.weight; 
+    }
+  }
+
   /**
    * @param e Layer that was just resized.  
    * Triggered as the user resizes a rectangle or circle.
@@ -1407,16 +1417,11 @@ export default class Annotator extends Component<
    * Handle keyup event of hotkey for grouping annotations
    */
   private handleKeyUpGroup = (e: KeyboardEvent) => {
-    if (this.annotationAction === AnnotationAction.WAITIING) {
-      return;
-    }
     console.log('shift key up');
-    if (this.state.callout.show) {
+    if (this.annotationAction === AnnotationAction.GROUP && this.state.callout.show) {
       this.annotationAction = AnnotationAction.WAITIING;
       return;
     } 
-
-    this.annotationAction = AnnotationAction.SELECT;
   }
 
   /**
@@ -1456,6 +1461,17 @@ export default class Annotator extends Component<
         let selectedAnnotation = this.getSelectedAnnotation(e) as AnnotationLayer | null;
         if (selectedAnnotation) {
           // TODO: If part of a group, highlight all group members
+
+          const group = this.state.groupedAnnotations.find(cluster => 
+            cluster.annotations.some(annotation => annotation === selectedAnnotation)
+          )
+          if (group) {
+            // Show group members
+            group.annotations.forEach(annotation => {
+              this.highlightAnnotation(annotation);
+            })
+          }
+
           this.setSelectedAnnotation(selectedAnnotation as AnnotationLayer, true);
         } else {
           this.setSelectedAnnotation(null);
@@ -1543,14 +1559,14 @@ export default class Annotator extends Component<
   private updateSelectedAnnotationCluster = (annotation: AnnotationLayer) => {
     const currentClusterAnnotations = this.state.selectedAnnotationCluster?.annotations; 
     let updatedClusterAnnotations = currentClusterAnnotations?.slice() ?? [];
+    // TODO: IF BELONGS TO ANOTHER GROUP OF DIFFERENT TAG, WARN
+
     if (currentClusterAnnotations?.includes(annotation)) {
       // Remove annotation from cluster
-      annotation.options.fillOpacity = PrimitiveShapeOptions.fillOpacity;
-      annotation.options.weight = PrimitiveShapeOptions.weight;
+      this.highlightAnnotation(annotation, false);
       updatedClusterAnnotations = updatedClusterAnnotations?.filter(item => item !== annotation);
     } else {
-      annotation.options.fillOpacity = 0.7;
-      annotation.options.weight = annotation.options.weight*3; 
+      this.highlightAnnotation(annotation);
       updatedClusterAnnotations.push(annotation);
     }
   
@@ -1584,8 +1600,7 @@ export default class Annotator extends Component<
   private resetSelectedAnnotationCluster = () => {
     // Unhighlight selected annotations
     this.state.selectedAnnotationCluster?.annotations.forEach(annotation => {
-      annotation.options.fillOpacity = PrimitiveShapeOptions.fillOpacity;
-      annotation.options.weight = PrimitiveShapeOptions.weight;
+      this.highlightAnnotation(annotation, false);
     })
     this.setState({ selectedAnnotationCluster: null });
   }
