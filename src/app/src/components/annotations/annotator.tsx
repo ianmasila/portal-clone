@@ -481,7 +481,7 @@ export default class Annotator extends Component<
     this.map.on("mousedown", this.handleMouseDown);
     this.map.on("mouseup", this.handleMouseUp);
     this.map.on("mousemove", this.handleMouseMove);
-    this.map.on("mouseout", this.handleMouseUp);
+    this.map.on("mouseout", this.handleMouseOut);
     this.map.on("contextmenu", this.handleContextMenu);
 
     this.map.on("mouseup", () => {
@@ -854,6 +854,7 @@ export default class Annotator extends Component<
   public intersectAnnotations(annotation1: AnnotationLayer, annotation2: AnnotationLayer): AnnotationLayer {
     const poly1 = annotation1 as L.Layer as PolylineObjectType;
     const poly2 = annotation2 as L.Layer as PolylineObjectType;
+    // TODO: ATTACH OPTIONS PROPERLY TO INTERSECTION POLYGON
     const intersection = GetAnnotationIntersection(poly1, poly2);
     if (intersection) {
       const intersectionWithListeners = AttachAnnotationHandlers(
@@ -2420,6 +2421,7 @@ export default class Annotator extends Component<
                 SetAnnotationTag: this.setAnnotationTag,
                 OpenAdvancedSettings: this.handleAdvancedSettingsOpen,
                 SetAnnotationVisibility: this.setAnnotationVisibility,
+                SetSelectedAnnotation: this.setSelectedAnnotation,
                 SingleAnalysis: this.singleAnalysis,
                 BulkAnalysis: this.bulkAnalysis,
                 ToggleConfidence: this.toggleConfidence,
