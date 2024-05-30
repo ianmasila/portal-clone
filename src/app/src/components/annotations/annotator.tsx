@@ -1646,6 +1646,15 @@ export default class Annotator extends Component<
       return;
     } 
 
+    // TODO: Ungroup annotations
+    // const group = this.state.groupedAnnotations.find(cluster => 
+    //   cluster.annotations.some(item => item === annotation)
+    // );
+    // if (group) {
+    //   // Make cluster of annotations to be ungrouped
+    // }
+
+
     if (currentClusterAnnotations?.includes(annotation)) {
       // Remove annotation from cluster
       this.highlightAnnotation(annotation, false);
@@ -1677,7 +1686,7 @@ export default class Annotator extends Component<
           <Button icon="group-objects" text="Group" minimal small 
             onClick={(_) => this.handleGroupAnnotations('accept')} 
             disabled={!this.state.selectedAnnotationCluster?.annotations.length}
-            />
+          />
         </span>
     })
   }
