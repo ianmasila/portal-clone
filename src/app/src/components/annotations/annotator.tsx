@@ -200,6 +200,7 @@ interface AnnotatorState {
   selectedAnnotation: AnnotationLayer | null,
   /* Currently selected annotations clustered up into a unit */
   selectedAnnotationCluster: AnnotationCluster | null;
+  /* Grouped annotations: //TODO: USE FEATURE GROUP */
   groupedAnnotations: AnnotationCluster[];
   selectedGroupedAnnotations: AnnotationCluster | null;
 }
@@ -783,7 +784,28 @@ export default class Annotator extends Component<
           }
         });
 
-        // TODO: SEARCH OVER NESTED GROUPS, NOT SUPER GROUP
+        // Reduce function to find and collect unique annotation groups in a Set
+        const annotationGroups = annotationList.reduce((groups, annotation) => {
+          const group = this.state.groupedAnnotations.find(cluster => 
+            cluster.annotations.some(item => item === annotation)
+          );
+          if (group) {
+            groups.add(group); // Add the group to the Set to ensure uniqueness
+          }
+          return groups;
+        }, new Set());
+
+        // Iterate over the unique annotation groups
+        annotationGroups.forEach((group: any) => {
+          if (visible) {
+            group?.annotations?.forEach((annotation: any) => hiddenAnnotations.delete(annotation.options.annotationID));
+          } else {
+            group?.annotations?.forEach((annotation: any) => hiddenAnnotations.add(annotation.options.annotationID));
+          }
+        });
+
+
+        // TODO: USE FEATURE GROUP: SEARCH OVER NESTED GROUPS, NOT SUPER GROUP
         // const annotationGroups = annotationList.reduce((groups, annotation) => {
         //   const group = findFeatureGroupForLayer(annotation, this.annotationGroup);
         //   if (group) {
@@ -799,7 +821,7 @@ export default class Annotator extends Component<
         //     group.eachLayer(annotation => hiddenAnnotations.add(annotation.options.annotationID));
         //   }
         // })
-        
+
         return { hiddenAnnotations };
       },
       () => this.filterAnnotationVisibility()
