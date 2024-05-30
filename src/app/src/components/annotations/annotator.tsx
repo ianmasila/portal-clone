@@ -26,6 +26,7 @@ import {
   AttachAnnotationHandlers,
   AttachAnnotationOptions,
   GetAnnotationColour,
+  findFeatureGroupForLayer,
 } from "@portal/components/annotations/utils/annotation";
 
 import {
@@ -773,8 +774,7 @@ export default class Annotator extends Component<
   ): void {
     this.setState(
       prevState => {
-        const hiddenAnnotations = new Set<string>(prevState.hiddenAnnotations);
-
+        const hiddenAnnotations = new Set<string>(prevState.hiddenAnnotations);    
         annotationList.forEach(annotation => {
           if (visible) {
             hiddenAnnotations.delete(annotation.options.annotationID);
@@ -782,6 +782,24 @@ export default class Annotator extends Component<
             hiddenAnnotations.add(annotation.options.annotationID);
           }
         });
+
+        // TODO: SEARCH OVER NESTED GROUPS, NOT SUPER GROUP
+        // const annotationGroups = annotationList.reduce((groups, annotation) => {
+        //   const group = findFeatureGroupForLayer(annotation, this.annotationGroup);
+        //   if (group) {
+        //     groups.push(group);
+        //   }
+        //   return groups;
+        // }, []);    
+
+        // annotationGroups.forEach(group => {
+        //   if (visible) {
+        //     group.eachLayer(annotation => hiddenAnnotations.delete(annotation.options.annotationID));
+        //   } else {
+        //     group.eachLayer(annotation => hiddenAnnotations.add(annotation.options.annotationID));
+        //   }
+        // })
+        
         return { hiddenAnnotations };
       },
       () => this.filterAnnotationVisibility()

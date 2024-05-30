@@ -268,3 +268,38 @@ export const AttachAnnotationOptions = (
 
   return layer;
 }
+
+/**
+ * Recursively find the FeatureGroup that contains the specified layer.
+ * @param {AnnotationLayer} layer - The layer to search for.
+ * @param {L.FeatureGroup} group - The FeatureGroup to search within.
+ * @returns {L.FeatureGroup | null} - The FeatureGroup containing the layer, or null if not found.
+ */
+export const findFeatureGroupForLayer = (layer: AnnotationLayer, group: L.FeatureGroup): L.FeatureGroup | null => { 
+  if (!group || !layer) {
+    return null;
+  }
+
+  let foundGroup: L.FeatureGroup | null = null;
+
+  // Helper function to recursively search groups
+  function searchGroup(currentGroup: L.FeatureGroup): L.FeatureGroup | null {
+    const layers = currentGroup.getLayers();
+
+    for (const l of layers) {
+      if (l instanceof L.FeatureGroup) {
+        foundGroup = searchGroup(l); // Recursively search in nested FeatureGroups
+        if (foundGroup) {
+          return foundGroup; // Return immediately if found
+        }
+      } else if (l === layer) {
+        return currentGroup; // Found the group containing the layer
+      }
+    }
+
+    return null;
+  }
+
+  foundGroup = searchGroup(group);
+  return foundGroup;
+}
