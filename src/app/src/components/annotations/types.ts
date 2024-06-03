@@ -27,4 +27,4 @@ export interface AnnotationTagType {
 /* Leaflet Annotation Type */
 export type PolylineObjectType = L.Polyline | L.Rectangle | L.Polygon;
 
-export type UserResponse = 'accept' | 'decline' | 'cancel';
+export type UserResponse = 'accept' | 'decline' | 'cancel' | 'undo';

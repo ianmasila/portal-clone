@@ -194,6 +194,7 @@ interface AnnotatorState {
       y: number,
     } | undefined
     onClose: () => void;
+    onClickOutside: () => void;
   }
   currAnnotationPlaybackId: number,
   /* Currently selected annotation */
@@ -345,6 +346,7 @@ export default class Annotator extends Component<
         content: null,
         center: undefined,
         onClose: this.resetCallout,
+        onClickOutside: this.resetCallout,
       },
       currAnnotationPlaybackId: 0,
       selectedAnnotation: null,
@@ -675,7 +677,8 @@ export default class Annotator extends Component<
         icon: null,
         content: "",
         center: undefined,
-        onClose: this.resetCallout
+        onClose: this.resetCallout,
+        onClickOutside: this.resetCallout,
       }
     });
   }
@@ -808,7 +811,9 @@ export default class Annotator extends Component<
 
         // Iterate over the unique annotation groups
         annotationGroups.forEach((group: any) => {
+          // Clean up
           group.bbox?.setStyle({ opacity: 0 });
+          this.resetCallout()
           if (visible) {
             group?.annotations?.forEach((annotation: any) => hiddenAnnotations.delete(annotation.options.annotationID));
           } else {
@@ -1628,12 +1633,29 @@ export default class Annotator extends Component<
           this.highlightAnnotation(annotation, false);
         })
         prevState.selectedGroupedAnnotations?.bbox.setStyle({ opacity: 0 });
-
+        this.resetCallout();
       }
-      group?.annotations.forEach(annotation => {
-        this.highlightAnnotation(annotation);
-      });
-      group?.bbox.setStyle({ opacity: 1 });
+
+      if (group) {
+        group.annotations.forEach(annotation => {
+          this.highlightAnnotation(annotation);
+        });
+        group.bbox.setStyle({ opacity: 1 });
+        this.updateCallout({
+          show: true,
+          content: 
+            <span style={{ display: 'flex', alignItems: 'center' }}>
+              <h4 className={`bp3-text-muted ${this.props.useDarkTheme ? "bp3-dark" : ""}`} style={{ margin: 0 }}>
+                {group.annotations.length} annotations selected
+              </h4>
+              <Button icon="ungroup-objects" text="Ungroup" minimal small 
+                onClick={(_) => this.handleGroupAnnotations('undo')} 
+              />
+            </span>,
+          onClose: () => this.handleGroupAnnotations('cancel'),
+          onClickOutside: () => this.handleGroupAnnotations('cancel'),
+        })
+      }
 
       return {
         selectedGroupedAnnotations: group
@@ -1718,6 +1740,15 @@ export default class Annotator extends Component<
     this.setState({ selectedAnnotationCluster: null });
   }
 
+  private resetSelectedGroupedAnnotations = () => {
+    // Unhighlight selected annotations
+    this.state.selectedGroupedAnnotations?.bbox.setStyle({ opacity: 0 });
+    this.state.selectedGroupedAnnotations?.annotations.forEach(annotation => {
+      this.highlightAnnotation(annotation, false);
+    })
+    this.setState({ selectedGroupedAnnotations: null });
+  }
+
   /* Commit the currently selected annotations cluster as a group */
   private handleGroupAnnotations = (type: UserResponse) => {
     switch (type) {
@@ -1734,11 +1765,21 @@ export default class Annotator extends Component<
       case 'decline':
         this.state.selectedAnnotationCluster?.bbox.removeFrom(this.map);
         break;
+      case 'undo':
+        this.setState(prevState => {
+          const selectedGroup = prevState.selectedGroupedAnnotations;
+          const newGroupedAnnotations = prevState.groupedAnnotations.slice().filter(group => group !== selectedGroup);
+          prevState.selectedGroupedAnnotations?.bbox.setStyle({ opacity: 0 });
+
+          return { groupedAnnotations: newGroupedAnnotations }
+        })
+        break;
       default:
         break;
     }
 
     this.resetSelectedAnnotationCluster();
+    this.resetSelectedGroupedAnnotations();
     this.resetCallout();
     this.annotationAction = AnnotationAction.SELECT;
   }
@@ -2462,6 +2503,7 @@ export default class Annotator extends Component<
                 show={this.state.callout.show}
                 center={this.state.callout.center}
                 onClose={this.state.callout.onClose}
+                onClickOutside={this.state.callout.onClose}
               >
                 {this.state.callout.content}
               </CardNotification>
