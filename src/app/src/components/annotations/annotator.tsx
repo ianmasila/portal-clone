@@ -20,7 +20,7 @@ import {
 
 import makeEta from "simple-eta";
 
-import {
+import createBoundingBox, {
   GenerateAssetAnnotations,
   GetAnnotationIntersection,
   AttachAnnotationHandlers,
@@ -204,6 +204,19 @@ interface AnnotatorState {
   groupedAnnotations: AnnotationCluster[];
   selectedGroupedAnnotations: AnnotationCluster | null;
 }
+
+/* Disable Leaflet.Draw's tooltip suggestions when drawing */
+L.drawLocal.draw.handlers.rectangle.tooltip = {
+  start: "",
+};
+L.drawLocal.draw.handlers.simpleshape.tooltip = {
+  end: ""
+};
+L.drawLocal.draw.handlers.polygon.tooltip = {
+  start: "",
+  cont: "",
+  end: "",
+};
 
 /**
  * This Annotator class is a super class of the annotator controls, image select
@@ -440,9 +453,7 @@ export default class Annotator extends Component<
     this.handleEditMove = throttle(this.handleEditMove, 1000).bind(this);
 
     this.getSelectedAnnotation = this.getSelectedAnnotation.bind(this);
-    this.updateSelectedAnnotationCluster = this.updateSelectedAnnotationCluster.bind(
-      this
-    );
+    this.updateSelectedAnnotationCluster = this.updateSelectedAnnotationCluster.bind(this);
     this.handleGroupAnnotations = this.handleGroupAnnotations.bind(this);
     this.setSelectedAnnotation = this.setSelectedAnnotation.bind(this);
     this.setSelectedAnnotationGroup = this.setSelectedAnnotationGroup.bind(this);
@@ -1420,7 +1431,6 @@ export default class Annotator extends Component<
    * Handle keydown event of hotkey for grouping annotations
    */
   private handleKeyDownGroup = (e: KeyboardEvent) => {
-    console.log('shift key down');
     if (this.annotationAction === AnnotationAction.WAITIING) {
       return;
     }
@@ -1436,7 +1446,6 @@ export default class Annotator extends Component<
    * Handle keyup event of hotkey for grouping annotations
    */
   private handleKeyUpGroup = (e: KeyboardEvent) => {
-    console.log('shift key up');
     if (this.annotationAction === AnnotationAction.GROUP && this.state.callout.show) {
       this.annotationAction = AnnotationAction.WAITIING;
       return;
@@ -1458,7 +1467,6 @@ export default class Annotator extends Component<
   }
 
   private handleMouseDown = (e: L.LeafletMouseEvent) => {
-    console.log('annotation action on mouse down', this.annotationAction);
     // console.log("🚀 ~ handleMouseDown e:", e)
     switch (this.annotationAction) {
       case AnnotationAction.SELECT:
@@ -1473,7 +1481,7 @@ export default class Annotator extends Component<
   }
   
   private handleMouseUp = (e: L.LeafletMouseEvent) => {
-    console.log("🚀 ~ handleMouseUp:", e)
+    // console.log("🚀 ~ handleMouseUp:", e)
     switch (this.annotationAction) {
       case AnnotationAction.SELECT:
         /* Select annotation */ 
@@ -1516,6 +1524,14 @@ export default class Annotator extends Component<
   private handleContextMenu = (e: L.LeafletMouseEvent) => {
     const selectedAnnotation = this.getSelectedAnnotation(e) as AnnotationLayer | null;
     if (selectedAnnotation) {
+      const group = this.state.groupedAnnotations.find(cluster => 
+        cluster.annotations.some(annotation => annotation === selectedAnnotation)
+      )
+      if (group) {
+        this.setSelectedAnnotationGroup(group);
+        return;
+      }
+
       e.originalEvent.preventDefault();
       e.originalEvent.stopPropagation();
       const x = e.originalEvent.clientX;
@@ -1583,7 +1599,7 @@ export default class Annotator extends Component<
           )
           this.setSelectedAnnotationGroup(group ?? null);
           this.highlightAnnotation(annotation);
-          if (editing) {
+          if (editing && !group) {
             annotation.editing?.enable();
           }
         } else {
@@ -1611,10 +1627,13 @@ export default class Annotator extends Component<
         prevState.selectedGroupedAnnotations?.annotations.forEach(annotation => {
           this.highlightAnnotation(annotation, false);
         })
+        prevState.selectedGroupedAnnotations?.bbox.setStyle({ opacity: 0 });
+
       }
       group?.annotations.forEach(annotation => {
         this.highlightAnnotation(annotation);
       });
+      group?.bbox.setStyle({ opacity: 1 });
 
       return {
         selectedGroupedAnnotations: group
@@ -1630,7 +1649,6 @@ export default class Annotator extends Component<
       annotation.options.annotationTag === currentClusterAnnotations[0].options.annotationTag;
 
     if (!isSameTag) {
-      console.log('no group. different tags');
       this.updateCallout({
         content: 
           <span style={{ display: 'flex', alignItems: 'center' }}>
@@ -1646,15 +1664,6 @@ export default class Annotator extends Component<
       return;
     } 
 
-    // TODO: Ungroup annotations
-    // const group = this.state.groupedAnnotations.find(cluster => 
-    //   cluster.annotations.some(item => item === annotation)
-    // );
-    // if (group) {
-    //   // Make cluster of annotations to be ungrouped
-    // }
-
-
     if (currentClusterAnnotations?.includes(annotation)) {
       // Remove annotation from cluster
       this.highlightAnnotation(annotation, false);
@@ -1664,10 +1673,19 @@ export default class Annotator extends Component<
       updatedClusterAnnotations.push(annotation);
     }
   
+    // Create or update the bounding box for the updated annotations
+    const bbox = createBoundingBox(
+      updatedClusterAnnotations,
+      this.map,
+    );
+
     this.setState(prevState => {
+      prevState.selectedAnnotationCluster?.bbox.removeFrom(this.map);
+      bbox.addTo(this.map);
       const updatedCluster = {
         ...prevState.selectedAnnotationCluster, 
-        annotations: updatedClusterAnnotations
+        annotations: updatedClusterAnnotations,
+        bbox: bbox,
       };
 
       return {
@@ -1693,6 +1711,7 @@ export default class Annotator extends Component<
 
   private resetSelectedAnnotationCluster = () => {
     // Unhighlight selected annotations
+    this.state.selectedAnnotationCluster?.bbox.setStyle({ opacity: 0 });
     this.state.selectedAnnotationCluster?.annotations.forEach(annotation => {
       this.highlightAnnotation(annotation, false);
     })
@@ -1705,20 +1724,23 @@ export default class Annotator extends Component<
       case 'accept':
         const currentAnnotationCluster = this.state.selectedAnnotationCluster;
         if (currentAnnotationCluster) {
-          console.log('grouped.')
           this.setState(prevState => {
             const newGroupedAnnotations = prevState.groupedAnnotations.slice();
             newGroupedAnnotations.push(currentAnnotationCluster);
-
             return { groupedAnnotations: newGroupedAnnotations }
           })
         }
+        break;
+      case 'decline':
+        this.state.selectedAnnotationCluster?.bbox.removeFrom(this.map);
+        break;
       default:
-        this.resetSelectedAnnotationCluster();
-        this.resetCallout();
-        this.annotationAction = AnnotationAction.SELECT;
-        return;
+        break;
     }
+
+    this.resetSelectedAnnotationCluster();
+    this.resetCallout();
+    this.annotationAction = AnnotationAction.SELECT;
   }
 
   /* For now, we only support `intersect` */

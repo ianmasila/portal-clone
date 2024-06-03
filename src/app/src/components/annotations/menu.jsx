@@ -143,7 +143,6 @@ export default class AnnotationMenu extends Component {
   }
 
   setAnnotationTag(tagid) {
-    console.log("🚀 ~ AnnotationMenu ~ setAnnotationTag ~ setAnnotationTag:")
     this.setState({
       selectedTag: tagid,
     });
@@ -151,8 +150,6 @@ export default class AnnotationMenu extends Component {
   }
 
   setSelectedAnnotation(annotation) {
-    console.log("🚀 ~ AnnotationMenu ~ setSelectedAnnotation ~ setSelectedAnnotation:");
-
     /* If annotation is null, set to empty string */
     if (annotation === null) {
       this.setState({ selectedAnnotationID: "" });
@@ -321,7 +318,6 @@ export default class AnnotationMenu extends Component {
                 <div>{this.generateAnnotationHideIcon(annotation)}</div>
               }
               onClick={async () => {
-                console.log('annotator menu click on item')
                 /**
                  * Click on the annotation on the image
                  * Annotator will handle the state change

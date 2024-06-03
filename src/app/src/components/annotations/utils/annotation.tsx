@@ -303,3 +303,49 @@ export const findFeatureGroupForLayer = (layer: AnnotationLayer, group: L.Featur
   foundGroup = searchGroup(group);
   return foundGroup;
 }
+
+/**
+ * Create a bounding box for a set of annotations with a white dashed border.
+ * @param annotations - Array of AnnotationLayer objects
+ * @param map - Leaflet map instance to add the bounding box to
+ * @param options - Additional options for the bounding box
+ * @param listeners - Optional event listeners to attach to the bounding box
+ * @returns {L.Rectangle} - The created bounding box rectangle
+ */
+function createBoundingBox(
+  annotations: AnnotationLayer[],
+  map: L.Map,
+  options: L.PolylineOptions = {},
+  listeners: { [key: string]: (event: L.LeafletEvent) => void } = {}
+): L.Rectangle {
+  // Calculate the bounds of the annotations
+  const latLngs: L.LatLng[] = annotations.flatMap(ann => {
+    if (ann instanceof L.Marker && ann.getLatLng) {
+      return [ann.getLatLng()];
+    } else if (ann instanceof L.Polygon && ann.getLatLngs) {
+      return (ann.getLatLngs() as L.LatLng[][]).flat();
+    }
+    return [];
+  });
+
+  const bounds = L.latLngBounds(latLngs);
+
+  // Create the bounding box rectangle with default and additional options
+  const bbox = L.rectangle(bounds, {
+    color: 'white',
+    weight: 1,
+    dashArray: '5, 5',
+    fillOpacity: 0, 
+    interactive: false,
+    ...options
+  });
+
+  // Add event listeners if provided
+  Object.entries(listeners).forEach(([event, handler]) => {
+    bbox.on(event, handler);
+  });
+
+  return bbox;
+}
+
+export default createBoundingBox;

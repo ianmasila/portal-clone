@@ -14,6 +14,7 @@ export interface AnnotationLayer extends L.Layer {
 /* Annotation group/cluster */
 export interface AnnotationCluster {
   annotations: AnnotationLayer[];
+  bbox: L.Rectangle;  // Bounding box of annotations. onClick, select cluster
 } 
 
 /* Annotation Interface */
