@@ -808,13 +808,13 @@ export default class Annotator extends Component<
 
         // Iterate over the unique annotation groups
         annotationGroups.forEach((group: any) => {
+          group.bbox?.setStyle({ opacity: 0 });
           if (visible) {
             group?.annotations?.forEach((annotation: any) => hiddenAnnotations.delete(annotation.options.annotationID));
           } else {
             group?.annotations?.forEach((annotation: any) => hiddenAnnotations.add(annotation.options.annotationID));
           }
         });
-
 
         // TODO: USE FEATURE GROUP: SEARCH OVER NESTED GROUPS, NOT SUPER GROUP
         // const annotationGroups = annotationList.reduce((groups, annotation) => {
