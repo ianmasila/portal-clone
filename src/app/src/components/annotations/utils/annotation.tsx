@@ -310,14 +310,17 @@ export const findFeatureGroupForLayer = (layer: AnnotationLayer, group: L.Featur
  * @param map - Leaflet map instance to add the bounding box to
  * @param options - Additional options for the bounding box
  * @param listeners - Optional event listeners to attach to the bounding box
- * @returns {L.Rectangle} - The created bounding box rectangle
+ * @returns {L.Rectangle | null} - The created bounding box rectangle
  */
-function createBoundingBox(
+export function createBoundingBox(
   annotations: AnnotationLayer[],
   map: L.Map,
   options: L.PolylineOptions = {},
   listeners: { [key: string]: (event: L.LeafletEvent) => void } = {}
-): L.Rectangle {
+): L.Rectangle | null {
+  if (!annotations?.length) {
+    return null;
+  }
   // Calculate the bounds of the annotations
   const latLngs: L.LatLng[] = annotations.flatMap(ann => {
     if (ann instanceof L.Marker && ann.getLatLng) {
@@ -348,4 +351,18 @@ function createBoundingBox(
   return bbox;
 }
 
-export default createBoundingBox;
+/**
+ * Calculate the bottom-center latlng of a bounding box.
+ * @param bbox - The bounding box layer (L.Rectangle).
+ * @returns {L.LatLng} - The page coordinates of the bottom-center point.
+ */
+export function getBottomCenter(bbox: L.Rectangle): L.LatLng {
+  // Get the bounds of the bounding box
+  const bounds = bbox.getBounds();
+  
+  // Calculate the bottom-center point of the bounding box
+  const bottomCenter = bounds.getSouthEast();
+  bottomCenter.lng = bounds.getSouthWest().lng + (bounds.getSouthEast().lng - bounds.getSouthWest().lng) / 2;
+
+  return bottomCenter;
+}

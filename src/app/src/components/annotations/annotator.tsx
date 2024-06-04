@@ -20,12 +20,14 @@ import {
 
 import makeEta from "simple-eta";
 
-import createBoundingBox, {
+import {
   GenerateAssetAnnotations,
   GetAnnotationIntersection,
   AttachAnnotationHandlers,
   AttachAnnotationOptions,
   GetAnnotationColour,
+  createBoundingBox,
+  getBottomCenter,
   findFeatureGroupForLayer,
 } from "@portal/components/annotations/utils/annotation";
 
@@ -189,10 +191,7 @@ interface AnnotatorState {
     intent: Intent;
     icon: any;
     content: React.ReactNode;
-    center: {
-      x: number,
-      y: number,
-    } | undefined
+    center: L.Point | undefined
     onClose: () => void;
     onClickOutside: () => void;
   }
@@ -1632,7 +1631,7 @@ export default class Annotator extends Component<
         prevState.selectedGroupedAnnotations?.annotations.forEach(annotation => {
           this.highlightAnnotation(annotation, false);
         })
-        prevState.selectedGroupedAnnotations?.bbox.setStyle({ opacity: 0 });
+        prevState.selectedGroupedAnnotations?.bbox?.setStyle({ opacity: 0 });
         this.resetCallout();
       }
 
@@ -1640,7 +1639,9 @@ export default class Annotator extends Component<
         group.annotations.forEach(annotation => {
           this.highlightAnnotation(annotation);
         });
-        group.bbox.setStyle({ opacity: 1 });
+        group.bbox?.setStyle({ opacity: 1 });
+        const bboxCenter = group.bbox ? this.map.latLngToContainerPoint(getBottomCenter(group.bbox)) : undefined;
+
         this.updateCallout({
           show: true,
           content: 
@@ -1652,8 +1653,10 @@ export default class Annotator extends Component<
                 onClick={(_) => this.handleGroupAnnotations('undo')} 
               />
             </span>,
+          center: bboxCenter,
           onClose: () => this.handleGroupAnnotations('cancel'),
           onClickOutside: () => this.handleGroupAnnotations('cancel'),
+          
         })
       }
 
@@ -1702,8 +1705,8 @@ export default class Annotator extends Component<
     );
 
     this.setState(prevState => {
-      prevState.selectedAnnotationCluster?.bbox.removeFrom(this.map);
-      bbox.addTo(this.map);
+      prevState.selectedAnnotationCluster?.bbox?.removeFrom(this.map);
+      bbox?.addTo(this.map);
       const updatedCluster = {
         ...prevState.selectedAnnotationCluster, 
         annotations: updatedClusterAnnotations,
@@ -1715,7 +1718,7 @@ export default class Annotator extends Component<
       }
     })
 
-    // TODO: Center info component
+    const bboxCenter = bbox ? this.map.latLngToContainerPoint(getBottomCenter(bbox)) : undefined;
     this.updateCallout({
       show: true,
       content: 
@@ -1727,13 +1730,14 @@ export default class Annotator extends Component<
             onClick={(_) => this.handleGroupAnnotations('accept')} 
             disabled={!this.state.selectedAnnotationCluster?.annotations.length}
           />
-        </span>
+        </span>,
+        center: bboxCenter,
     })
   }
 
   private resetSelectedAnnotationCluster = () => {
     // Unhighlight selected annotations
-    this.state.selectedAnnotationCluster?.bbox.setStyle({ opacity: 0 });
+    this.state.selectedAnnotationCluster?.bbox?.setStyle({ opacity: 0 });
     this.state.selectedAnnotationCluster?.annotations.forEach(annotation => {
       this.highlightAnnotation(annotation, false);
     })
@@ -1742,7 +1746,7 @@ export default class Annotator extends Component<
 
   private resetSelectedGroupedAnnotations = () => {
     // Unhighlight selected annotations
-    this.state.selectedGroupedAnnotations?.bbox.setStyle({ opacity: 0 });
+    this.state.selectedGroupedAnnotations?.bbox?.setStyle({ opacity: 0 });
     this.state.selectedGroupedAnnotations?.annotations.forEach(annotation => {
       this.highlightAnnotation(annotation, false);
     })
@@ -1763,13 +1767,13 @@ export default class Annotator extends Component<
         }
         break;
       case 'decline':
-        this.state.selectedAnnotationCluster?.bbox.removeFrom(this.map);
+        this.state.selectedAnnotationCluster?.bbox?.removeFrom(this.map);
         break;
       case 'undo':
         this.setState(prevState => {
           const selectedGroup = prevState.selectedGroupedAnnotations;
           const newGroupedAnnotations = prevState.groupedAnnotations.slice().filter(group => group !== selectedGroup);
-          prevState.selectedGroupedAnnotations?.bbox.setStyle({ opacity: 0 });
+          prevState.selectedGroupedAnnotations?.bbox?.setStyle({ opacity: 0 });
 
           return { groupedAnnotations: newGroupedAnnotations }
         })

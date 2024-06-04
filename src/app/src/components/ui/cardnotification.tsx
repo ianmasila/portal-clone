@@ -5,10 +5,7 @@ import styles from './cardnotification.module.css';
 
 interface CardNotificationProps extends CardProps {
     show: boolean;
-    center?: {
-        x: number;
-        y: number;
-    }
+    center?: L.Point,
     onClick?: () => void;
     onClickOutside?: () => void;
     onClose?: () => void;
@@ -29,7 +26,7 @@ const CardNotification: React.FC<CardNotificationProps> = forwardRef<HTMLDivElem
             <div 
                 className={styles.container} 
                 ref={ref}
-                style={center ? { left: center.x, top: center.y, transform: 'translate(-50%, -50%)' } : {}}
+                style={center ? { left: center.x, top: center.y, transform: 'translate(-44%, 3%)' } : {}}
                 onClick={onClick}
             >
                 <Card {...restProps} className={styles.card}>
