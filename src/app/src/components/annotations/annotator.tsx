@@ -51,7 +51,7 @@ import {
   APIGetPredictionProgress,
 } from "@portal/api/annotation";
 
-import { invert, cloneDeep, isEmpty, throttle } from "lodash";
+import { invert, cloneDeep, isEmpty, throttle, debounce } from "lodash";
 
 import { CreateGenericToast } from "@portal/utils/ui/toasts";
 import AnnotatorInstanceSingleton from "./utils/annotator.singleton";
@@ -431,7 +431,7 @@ export default class Annotator extends Component<
 
     this.setAnnotationVisibility = this.setAnnotationVisibility.bind(this);
     this.setAllAnnotationVisibility = this.setAllAnnotationVisibility.bind(this);
-    this.filterAnnotationVisibility = this.filterAnnotationVisibility.bind(this);
+    this.filterAnnotationVisibility = debounce(this.filterAnnotationVisibility, 200).bind(this);
     this.bindAnnotationTooltip = this.bindAnnotationTooltip.bind(this);
     this.setAnnotationOptions = this.setAnnotationOptions.bind(this);
     this.toggleShowSelected = this.toggleShowSelected.bind(this);
@@ -1919,10 +1919,11 @@ export default class Annotator extends Component<
     const invertedProjectTags = invert(this.state.tagInfo.tags);
 
     /* Add Annotation Based on Confidence Value and filtered Tags */
-    this.state.currentAssetAnnotations
+    const filteredAnnotations = 
+      this.state.currentAssetAnnotations
       /*
-       * @TODO : Refactor this before ProductHunt
-       */
+      * @TODO : Refactor this before ProductHunt
+      */
       .filter(
         (annotation: any) =>
           !this.state.hiddenAnnotations.has(annotation.options.annotationID) &&
@@ -1938,21 +1939,28 @@ export default class Annotator extends Component<
               )) &&
           annotation.options.confidence >= this.state.confidence
       )
-      .forEach((confidentAnnotation: any) => {
-        /* Add It Onto Leaflet */
-        // CAUTION: DEEP CLONE REMOVES UPDATES MADE ON ANNOTATION
-        // const annotationToCommit = cloneDeep(confidentAnnotation);
-        const annotationToCommit = confidentAnnotation;
-        /* Customize Annotation Opacity */
-        annotationToCommit.options.fillOpacity = this.state.annotationOptions.opacity;
-        /* Customize Annotation Outline Toggle */
-        annotationToCommit.options.weight = !this.state.annotationOptions
-          .isOutlined
-          ? 0
-          : confidentAnnotation.options.weight;
+    
+    filteredAnnotations.forEach((confidentAnnotation: any) => {
+      /* Add It Onto Leaflet */
+      // CAUTION: DEEP CLONE REMOVES UPDATES MADE ON ANNOTATION
+      // const annotationToCommit = cloneDeep(confidentAnnotation);
+      const annotationToCommit = confidentAnnotation;
+      /* Customize Annotation Opacity */
+      annotationToCommit.options.fillOpacity = this.state.annotationOptions.opacity;
+      /* Customize Annotation Outline Toggle */
+      annotationToCommit.options.weight = !this.state.annotationOptions
+        .isOutlined
+        ? 0
+        : confidentAnnotation.options.weight;
 
-        this.annotationGroup.addLayer(annotationToCommit);
-      });
+      this.annotationGroup.addLayer(annotationToCommit);
+    });
+
+    /**
+     * Provide a deeper understanding of the predictions
+     * - Count the number of predictions made
+     */
+    console.log(`🚀 Number of predictions made: ${filteredAnnotations.length}`)
 
     this.annotationGroup.eachLayer(layer => this.bindAnnotationTooltip(layer));
   }
@@ -2173,7 +2181,6 @@ export default class Annotator extends Component<
    * to current annotationGroup
    */
   public updateCurrentAssetAnnotations(annotations: PolylineObjectType[]): void {
-    // console.log("🚀 ~ updateCurrentAssetAnnotations ~ updateCurrentAssetAnnotations:")
     this.setState({
       currentAssetAnnotations: annotations,
     });
